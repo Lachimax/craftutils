@@ -6,7 +6,7 @@ import math
 from astropy.coordinates import SkyCoord
 import os
 import astropy.table as tbl
-from astropy.io.fits import open
+import astropy.io.fits as fits
 import matplotlib.pyplot as plt
 
 
