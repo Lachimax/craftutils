@@ -335,6 +335,12 @@ def single_param_all_epochs(obj: str, param: str, instrument: str = 'FORS2'):
 
 
 def object_output_params(obj: str, instrument: str = 'FORS2'):
+    """
+
+    :param obj: The epoch title, FRBXXXXXX_X; ie, the title of the epoch parameter file without .yaml
+    :param instrument: Instrument on which the data was taken.
+    :return:
+    """
     p = object_params_instrument(obj=obj, instrument=instrument)
     if p is None:
         return None
