@@ -182,11 +182,20 @@ def write_params(path: 'str', params: 'dict'):
             file.writelines(param + "=" + str(params[param]) + '\n')
 
 
-def write_log(path, action):
+def write_log(path: str, action: str, date: str = None):
+    """
+    Writes a line to a log file.
+    :param path: Path to the log file. The file will be created if it does not exist.
+    :param action: Line to write to log file, written below the date.
+    :param date: String to write as date. If left empty, present date will be written automatically.
+    :return:
+    """
+    if date is None:
+        date = dt.now().strftime('%Y-%m-%dT%H:%M:%S')
     try:
-        with open(path, 'r') as log:
-            log.writelines('\n' + dt.now().strftime('%Y-%m-%dT%H:%M:%S'))
-            log.writelines('\n' + action)
+        with open(path, 'a') as log:
+            log.write('\n' + date)
+            log.write('\n' + action + '\n')
     except ValueError:
         print('Log writing failed - skipping.')
 
@@ -398,7 +407,7 @@ def join_csv(filenames: [str], output: str):
         if file[-4:] == '.csv':
             tables.append(tbl.Table.read(file, format='ascii.csv'))
         elif file[-5:] == '.fits':
-            tables.append(tbl.Table(open(file)[1].data))
+            tables.append(tbl.Table(fits.open(file)[1].data))
         else:
             raise ValueError('File format not recognised.')
 
