@@ -7,11 +7,10 @@ from astropy import table
 from astropy.io import fits
 from astropy import wcs
 
-import PyCRAFT.photometry as ph
-import PyCRAFT.utils as u
-from PyCRAFT import stats as st
-import PyCRAFT.params as p
-import PyCRAFT.fits_files as ff
+import craftutils.utils as u
+from craftutils import stats as st
+import craftutils.params as p
+import craftutils.fits_files as ff
 
 sn_types = ['ia', 'ib', 'ic', 'iil', 'iip', 'iin']
 

@@ -7,8 +7,6 @@ from astropy.coordinates import SkyCoord
 import os
 import astropy.table as tbl
 import astropy.io.fits as fits
-import matplotlib.pyplot as plt
-
 
 # TODO: Arrange these into some kind of logical order.
 # TODO: Also comment.

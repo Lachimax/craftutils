@@ -1,7 +1,7 @@
-import craftutils.utils as u
 import numpy as np
 import numpy.random as rand
 
+import craftutils.utils as u
 
 def value_from_pdf(values, probabilities):
     """

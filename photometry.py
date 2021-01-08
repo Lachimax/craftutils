@@ -17,20 +17,15 @@ from astropy.modeling import fitting
 from astropy.modeling.functional_models import Sersic1D
 import astropy.table as table
 from astropy.io import fits as fits
-import astropy.time as time
 from astropy import convolution
 
 from matplotlib import pyplot as plt
 from datetime import datetime as dt
-import reproject as rp
 
 from craftutils import fits_files as ff
 import craftutils.params as p
 import craftutils.utils as u
 from craftutils import plotting
-import operator
-from functools import reduce
-
 
 # TODO: End-to-end pipeline script?
 

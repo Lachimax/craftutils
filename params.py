@@ -2,9 +2,10 @@ import ruamel.yaml as yaml
 import json
 from typing import Union
 import os
-from craftutils.utils import sanitise_file_ext, find_nearest, numpy_to_list, check_trailing_slash
 import numpy as np
 import astropy.table as tbl
+
+from craftutils.utils import sanitise_file_ext, find_nearest, numpy_to_list, check_trailing_slash
 
 
 def check_for_config():

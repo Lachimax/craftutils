@@ -5,7 +5,6 @@ from astropy.coordinates import SkyCoord
 
 import matplotlib.pyplot as plt
 import numpy as np
-import shutil
 
 from craftutils import fits_files as ff
 from craftutils import params as p

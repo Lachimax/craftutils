@@ -10,7 +10,6 @@ from astropy import wcs as wcs
 from astropy.visualization import (ImageNormalize, LogStretch, SqrtStretch, ZScaleInterval, MinMaxInterval,
                                    PowerStretch, wcsaxes)
 from astropy.table import Table
-from matplotlib.patches import Ellipse
 from typing import Union
 
 from craftutils import fits_files as ff
