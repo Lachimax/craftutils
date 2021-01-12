@@ -89,34 +89,34 @@ def update_fors2_calib():
 
 def retrieve_sdss_photometry(ra: float, dec: float):
     try:
-        import SciServer
+        from SciServer import Authentication, CasJobs
     except ImportError:
         print("It seems that SciScript/SciServer is not installed, or not accessible to this environment. "
               "\nIf you wish to automatically download SDSS data, please install "
               "\nSciScript (https://github.com/sciserver/SciScript-Python); "
               "\notherwise, retrieve the data manually from "
               "\nhttp://skyserver.sdss.org/dr16/en/tools/search/sql.aspx")
-        return None
+    return None
 
     keys = p.keys()
     user = keys['sciserver_user']
     password = keys["sciserver_pwd"]
-    SciServer.Authentication.login(UserName=user, Password=password)
-    query = "SELECT objid,ra,dec"
-
+    Authentication.login(UserName=user, Password=password)
     # Construct an SQL query to send to SciServer
+    query = "SELECT objid,ra,dec"
     for f in sdss_filters:
         query += f",psfMag_{f},psfMagErr_{f},fiberMag_{f},fiberMagErr_{f},fiber2Mag_{f},fiber2MagErr_{f},petroMag_{f},petroMagErr_{f}"
     query += " FROM PhotoObj "
     query += f"WHERE ra BETWEEN {ra - 0.1} AND {ra + 0.1} "
     query += f"AND dec BETWEEN {dec - 0.1} AND {dec + 0.1} "
-    print(query)
-    return SciServer.CasJobs.executeQuery(sql=query, context='DR16')
+    print("Retrieving photometry from SDSS DR16 via SciServer...")
+    return CasJobs.executeQuery(sql=query, context='DR16')
 
 
 def save_sdss_photometry(ra: float, dec: float, output: str):
     df = retrieve_sdss_photometry(ra=ra, dec=dec)
     if df is not None:
+        print("Saving SDSS photometry to" + output)
         df.to_csv(output)
     else:
         print("No data retrieved from SDSS.")
