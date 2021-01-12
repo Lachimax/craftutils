@@ -137,12 +137,12 @@ def update_std_sdss_photometry(ra: float, dec: float):
     u.mkdir_check(path)
     path += "SDSS/"
     u.mkdir_check(path)
-    path += "SDSS_cat.csv"
+    path += "SDSS.csv"
 
     return save_sdss_photometry(ra=ra, dec=dec, output=path)
 
 
-def update_field_sdss_photometry(frb: str):
+def update_frb_sdss_photometry(frb: str):
     params = p.object_params_frb(frb)
     data_dir = params['data_dir']
     path = data_dir + "SDSS/"
