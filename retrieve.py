@@ -80,6 +80,10 @@ def save_fors2_calib(output: str, fil: str = 'I_BESS', date_from: str = '2017-01
 
 
 def update_fors2_calib():
+    """
+    Runs save_fors2_calib() for all four retrievable FORS2 filters
+    :return:
+    """
     for fil in fors2_filters_retrievable:
         path = p.config['photom_calib_dir'] + fil + '.txt'
         save_fors2_calib(output=path, fil=fil)
@@ -133,6 +137,18 @@ def update_std_sdss_photometry(ra: float, dec: float):
     u.mkdir_check(path)
     path += "SDSS/"
     u.mkdir_check(path)
-    path += "SDSS.csv"
+    path += "SDSS_cat.csv"
 
     return save_sdss_photometry(ra=ra, dec=dec, output=path)
+
+
+def update_field_sdss_photometry(frb: str):
+    params = p.object_params_frb(frb)
+    data_dir = params['data_dir']
+    path = data_dir + "SDSS/"
+    u.mkdir_check(path)
+    path += "SDSS.csv"
+    df = save_sdss_photometry(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
+    return df
+
+
