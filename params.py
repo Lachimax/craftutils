@@ -109,6 +109,10 @@ def add_params(file: str, params: dict, quiet: bool = False):
     yaml_to_json(file, quiet=quiet)
 
 
+def add_frb_param(obj: str, params: dict, quiet=False):
+    add_params(file=param_path + "FRBs/" + obj + ".yaml", params=params, quiet=quiet)
+
+
 def add_output_path(obj: str, key: str, path: str, instrument='fors2', quiet: bool = False):
     instrument = instrument.lower()
     p = object_params_instrument(obj=obj, instrument=instrument, quiet=quiet)
