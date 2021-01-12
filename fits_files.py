@@ -13,7 +13,6 @@ import string
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import reproject as rp
 
 from craftutils import utils as u
 from craftutils import plotting as pl
@@ -135,7 +134,7 @@ def reproject(image_1: Union[fits.HDUList, str], image_2: Union[fits.HDUList, st
     :param show:
     :return:
     """
-
+    import reproject as rp
     image_1, path_1 = path_or_hdu(image_1)
     image_2, path_2 = path_or_hdu(image_2)
     pix_scale_1 = get_pixel_scale(image_1)
