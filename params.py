@@ -552,7 +552,9 @@ def trim_transmission_curves(f: str, instrument: str, lambda_min: float, lambda_
 
 
 def keys():
-    return json.loads(param_path + "keys.json")
+    with open(param_path + "keys.json") as fp:
+        file = json.load(fp)
+    return file
 
 
 # def change_param_name(folder):
