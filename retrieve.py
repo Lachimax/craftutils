@@ -2,8 +2,10 @@ import urllib
 from datetime import date
 
 from craftutils import params as p
+from craftutils import utils as u
 
-retrievable_filters = ["I_BESS", "R_SPEC", "b_HIGH", "v_HIGH"]
+fors2_filters_retrievable = ["I_BESS", "R_SPEC", "b_HIGH", "v_HIGH"]
+sdss_filters = ["u", "g", "r", "i", "z"]
 
 
 def retrieve_fors2_calib(fil: str = 'I_BESS', date_from: str = '2017-01-01', date_to: str = None):
@@ -15,8 +17,8 @@ def retrieve_fors2_calib(fil: str = 'I_BESS', date_from: str = '2017-01-01', dat
     :param date_to: The date on which to end. If None, defaults to current date.
     :return: The table of parameters, as a string.
     """
-    if fil not in retrievable_filters:
-        raise ValueError(f"{fil} not recognised; fil must be one of {retrievable_filters}")
+    if fil not in fors2_filters_retrievable:
+        raise ValueError(f"{fil} not recognised; fil must be one of {fors2_filters_retrievable}")
     if date_to is None:
         date_to = str(date.today())
     # Construct the data expected by the FORS2 QC1 archive to send as a request.
@@ -77,9 +79,55 @@ def save_fors2_calib(output: str, fil: str = 'I_BESS', date_from: str = '2017-01
 
 
 def update_fors2_calib():
-    for fil in retrievable_filters:
+    for fil in fors2_filters_retrievable:
         path = p.config['photom_calib_dir'] + fil + '.txt'
         save_fors2_calib(output=path, fil=fil)
         if fil == 'R_SPEC':
             fil = 'R_SPECIAL'
         p.ingest_filter_properties(path=p.config['photom_calib_dir'] + fil + '.txt', instrument='FORS2')
+
+
+def retrieve_sdss_photometry(ra: float, dec: float):
+    try:
+        import SciServer
+    except ImportError:
+        print("It seems that SciScript/SciServer is not installed, or not accessible to this environment. "
+              "\nIf you wish to automatically download SDSS data, please install "
+              "\nSciScript (https://github.com/sciserver/SciScript-Python); "
+              "\notherwise, retrieve the data manually from "
+              "\nhttp://skyserver.sdss.org/dr16/en/tools/search/sql.aspx")
+        return None
+
+    keys = p.keys()
+    user = keys['sciserver_user']
+    password = keys["sciserver_pwd"]
+    SciServer.Authentication.login(UserName=user, Password=password)
+    query = "SELECT objid,ra,dec"
+
+    # Construct an SQL query to send to SciServer
+    for f in sdss_filters:
+        query += f",psfMag_{f},psfMagErr_{f},fiberMag_{f},fiberMagErr_{f},fiber2Mag_{f},fiber2MagErr_{f},petroMag_{f},petroMagErr_{f}"
+    query += " FROM PhotoObj "
+    query += f"WHERE ra BETWEEN {ra - 0.1} AND {ra + 0.1} "
+    query += f"AND dec BETWEEN {dec - 0.1} AND {dec + 0.1} "
+    print(query)
+    return SciServer.CasJobs.executeQuery(sql=query, context='DR16')
+
+
+def save_sdss_photometry(ra: float, dec: float, output: str):
+    df = retrieve_sdss_photometry(ra=ra, dec=dec)
+    if df is not None:
+        df.to_csv(output)
+    else:
+        print("No data retrieved from SDSS.")
+
+
+def update_std_sdss_photometry(ra: float, dec: float):
+    data_dir = p.config['top_data_dir']
+    path = f"{data_dir}/std_fields/RA{ra}_DEC{dec}/"
+    u.mkdir_check(path)
+    path += "SDSS/"
+    u.mkdir_check(path)
+    path += "SDSS.csv"
+
+    save_sdss_photometry(ra=ra, dec=dec, output=path)
