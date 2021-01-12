@@ -1,3 +1,5 @@
+# Code by Lachlan Marnoch, 2019-2020
+
 import ruamel.yaml as yaml
 import json
 from typing import Union
@@ -547,6 +549,10 @@ def trim_transmission_curves(f: str, instrument: str, lambda_min: float, lambda_
         file_params['wavelengths_filter_only'] = wavelengths[arg_lambda_min:arg_lambda_max]
 
     save_params(param_path + f'filters/{instrument}-{f}.yaml', file_params, quiet=quiet)
+
+
+def keys():
+    return json.loads(param_path + "keys.json")
 
 
 # def change_param_name(folder):
