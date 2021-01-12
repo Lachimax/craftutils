@@ -1,3 +1,5 @@
+# Code by Lachlan Marnoch, 2020
+
 import urllib
 from datetime import date
 
@@ -49,7 +51,6 @@ def retrieve_fors2_calib(fil: str = 'I_BESS', date_from: str = '2017-01-01', dat
         "table": "fors2_photometry",
         "output": "ascii",
     }
-    print(request)
     request = urllib.parse.urlencode(request)
     request = bytes(request, 'utf-8')
     page = urllib.request.urlopen("http://archive.eso.org/qc1/qc1_cgi", request)
@@ -96,8 +97,9 @@ def retrieve_sdss_photometry(ra: float, dec: float):
               "\nSciScript (https://github.com/sciserver/SciScript-Python); "
               "\notherwise, retrieve the data manually from "
               "\nhttp://skyserver.sdss.org/dr16/en/tools/search/sql.aspx")
-    return None
+        return None
 
+    print(f"Querying SDSS DR16 archive for field centring on RA={ra}, DEC={dec}")
     keys = p.keys()
     user = keys['sciserver_user']
     password = keys["sciserver_pwd"]
@@ -110,7 +112,8 @@ def retrieve_sdss_photometry(ra: float, dec: float):
     query += f"WHERE ra BETWEEN {ra - 0.1} AND {ra + 0.1} "
     query += f"AND dec BETWEEN {dec - 0.1} AND {dec + 0.1} "
     print("Retrieving photometry from SDSS DR16 via SciServer...")
-    return CasJobs.executeQuery(sql=query, context='DR16')
+    df = CasJobs.executeQuery(sql=query, context='DR16')
+    return df
 
 
 def save_sdss_photometry(ra: float, dec: float, output: str):
@@ -118,8 +121,10 @@ def save_sdss_photometry(ra: float, dec: float, output: str):
     if df is not None:
         print("Saving SDSS photometry to" + output)
         df.to_csv(output)
+        return df
     else:
         print("No data retrieved from SDSS.")
+        return None
 
 
 def update_std_sdss_photometry(ra: float, dec: float):
@@ -130,4 +135,4 @@ def update_std_sdss_photometry(ra: float, dec: float):
     u.mkdir_check(path)
     path += "SDSS.csv"
 
-    save_sdss_photometry(ra=ra, dec=dec, output=path)
+    return save_sdss_photometry(ra=ra, dec=dec, output=path)
