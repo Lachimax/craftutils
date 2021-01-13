@@ -95,6 +95,13 @@ def update_fors2_calib():
 
 
 def retrieve_sdss_photometry(ra: float, dec: float):
+    """
+    Retrieve SDSS photometry for a given field, in a 0.1 x 0.1 degree box centred on the passed coordinates
+    coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical distortion)
+    :param ra: Right Ascension of the centre of the desired field, in degrees.
+    :param dec: Declination of the centre of the desired field, in degrees.
+    :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
+    """
     try:
         from SciServer import Authentication, CasJobs
     except ImportError:
@@ -123,6 +130,15 @@ def retrieve_sdss_photometry(ra: float, dec: float):
 
 
 def save_sdss_photometry(ra: float, dec: float, output: str):
+    """
+    Retrieves and writes to disk the SDSS photometry for a given field, in a 0.1 x 0.1 degree box
+    centred on the field coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical
+    distortion)
+    :param ra: Right Ascension of the centre of the desired field, in degrees.
+    :param dec: Declination of the centre of the desired field, in degrees.
+    :param output: The location on disk to which to write the file.
+    :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
+    """
     df = retrieve_sdss_photometry(ra=ra, dec=dec)
     if df is not None:
         print("Saving SDSS photometry to" + output)
@@ -134,6 +150,14 @@ def save_sdss_photometry(ra: float, dec: float, output: str):
 
 
 def update_std_sdss_photometry(ra: float, dec: float):
+    """
+    Retrieves and writes to disk the SDSS photometry for a standard-star calibration field, in a 0.1 x 0.1 degree box
+    centred on the field coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical
+    distortion)
+    :param ra: Right Ascension of the centre of the desired field, in degrees.
+    :param dec: Declination of the centre of the desired field, in degrees.
+    :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
+    """
     data_dir = p.config['top_data_dir']
     path = f"{data_dir}/std_fields/RA{ra}_DEC{dec}/"
     u.mkdir_check(path)
@@ -145,6 +169,13 @@ def update_std_sdss_photometry(ra: float, dec: float):
 
 
 def update_frb_sdss_photometry(frb: str):
+    """
+    Retrieve SDSS photometry for the field of an FRB (with a valid param file in param_dir), in a 0.1 x 0.1 degree box
+    centred on the FRB coordinates, and
+    (Note - the width of the box is in RA degrees, not corrected for spherical distortion)
+    :param frb: FRB name, FRBXXXXXX. Must match title of param file.
+    :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
+    """
     params = p.object_params_frb(frb)
     data_dir = params['data_dir']
     path = data_dir + "SDSS/"
