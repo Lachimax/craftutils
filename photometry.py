@@ -26,16 +26,16 @@ import craftutils.params as p
 import craftutils.utils as u
 from craftutils import plotting
 
-# TODO: End-to-end pipeline script?
 
+# TODO: End-to-end pipeline script?
 # TODO: Change expected types to Union
 
 
-def gain_median_combine(old_gain=0.8, n_frames=1):
+def gain_median_combine(old_gain: float = 0.8, n_frames: int = 1):
     """
     Only valid if you have a median-combined image normalised to counts per second.
-    :param old_gain:
-    :param n_frames:
+    :param old_gain: Gain of the individual images.
+    :param n_frames: Number of stacked images.
     :return:
     """
 
@@ -433,7 +433,7 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
     size_legend = plot_params['size_legend']
     weight_line = plot_params['weight_line']
 
-    #plotting.latex_setup()
+    # plotting.latex_setup()
 
     major_ticks = np.arange(-30, 30, 1)
     minor_ticks = np.arange(-30, 30, 0.1)
@@ -458,7 +458,7 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
     # plt.suptitle("Magnitude Comparisons without outliers")
     plot.set_xlabel("Magnitude in " + cat_name + " catalogue ($g$-band)", fontsize=size_font, fontweight='bold')
     plot.set_ylabel("Magnitude from SExtractor (image)", fontsize=size_font, fontweight='bold')
-    #fig.savefig(output_path + "7-catvaper-outliers.pdf")
+    # fig.savefig(output_path + "7-catvaper-outliers.pdf")
     fig.savefig(output_path + "7-catvaper-outliers.png")
     if show:
         plt.show(plot)
