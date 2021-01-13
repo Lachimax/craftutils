@@ -1,4 +1,4 @@
-# Code by Lachlan Marnoch, 2019-2020
+# Code by Lachlan Marnoch, 2019-2021
 
 import ruamel.yaml as yaml
 import json
@@ -125,9 +125,19 @@ def add_output_value(obj: str, key: str, value: str, instrument='fors2', quiet: 
     add_params(file=p['data_dir'] + 'output_values', params={key: value}, quiet=quiet)
 
 
+def add_output_value_frb(obj: str, key: str, value: str, quiet: bool = False):
+    p = object_params_frb(obj=obj, quiet=quiet)
+    add_params(file=p['data_dir'] + 'output_values', params={key: value}, quiet=quiet)
+
+
 def add_output_values(obj: str, params: dict, instrument='fors2', quiet: bool = False):
     instrument = instrument.lower()
     p = object_params_instrument(obj=obj, instrument=instrument, quiet=quiet)
+    add_params(file=p['data_dir'] + 'output_values', params=params, quiet=quiet)
+
+
+def add_output_values_frb(obj: str, params: dict, quiet: bool = False):
+    p = object_params_frb(obj=obj, quiet=quiet)
     add_params(file=p['data_dir'] + 'output_values', params=params, quiet=quiet)
 
 
