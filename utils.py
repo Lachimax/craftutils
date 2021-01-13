@@ -8,6 +8,7 @@ import os
 import astropy.table as tbl
 import astropy.io.fits as fits
 
+
 # TODO: Arrange these into some kind of logical order.
 # TODO: Also comment.
 
@@ -421,3 +422,31 @@ def join_csv(filenames: [str], output: str):
 
     print('Writing to', output)
     output_tbl.write(output, format='ascii.csv', overwrite=True)
+
+
+def extract_xml_param(tag: str, xml_str: str):
+    """
+    Finds and extracts a single tagged value from an XML file. This will be the first instance of that tag in the file.
+    :param tag: The tag of the value.
+    :param xml_str: XML-formatted string containing the desired value.
+    :return:
+    """
+    print("Tag:", tag)
+    value = xml_str[xml_str.find(f"<{tag}>") + len(tag) + 2:xml_str.find(f"</{tag}>")]
+    print("Value:", value)
+    return value
+
+
+def unit_str_to_float(string: str):
+    """
+    Turns a single string value, with format <number> (<units>), into a float and also returns the units.
+    :param string:
+    :return:
+    """
+    print("String:", string)
+    i = string.find("(")
+    units = string[i + 1:string.find(")")]
+    print("Units:", units)
+    value = float(string[:string.find("(")])
+    print("Value:", value)
+    return value, units
