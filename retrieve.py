@@ -185,3 +185,75 @@ def update_frb_sdss_photometry(frb: str):
     return df
 
 
+def retrieve_irsa_xml(ra: float, dec: float):
+    """
+    Retrieves the extinction parameters for a given sky position from the IRSA Dust Tool
+    (https://irsa.ipac.caltech.edu/applications/DUST/)
+    :param ra: Right Ascension of the desired field, in degrees.
+    :param dec: Declination of the desired field, in degrees.
+    :return: XML-formatted string.
+    """
+    url = f"https://irsa.ipac.caltech.edu/cgi-bin/DUST/nph-dust?locstr={ra}+{dec}+equ+j2000"
+    print("\nRetrieving IRSA Dust Tool XML from", url)
+    irsa_xml = urllib.request.urlopen(url)
+    irsa_xml = irsa_xml.read()
+    return str(irsa_xml, 'utf-8')
+
+
+def retrieve_irsa_extinction(ra: float, dec: float):
+    """
+    Retrieves the extinction per bandpass table, and other relevant parameters, for a given sky position from the
+    IRSA Dust Tool (https://irsa.ipac.caltech.edu/applications/DUST/).
+    :param ra: Right Ascension of the desired field, in degrees.
+    :param dec: Declination of the desired field, in degrees.
+    :return: Tuple: dictionary of retrieved values, table-formatted string.
+    """
+    irsa_xml = retrieve_irsa_xml(ra=ra, dec=dec)
+
+    to_retrieve = {"refPixelValueSandF": "E_B_V_SandF"}
+    retrieved = {}
+    for tag in to_retrieve:
+        val_str = u.extract_xml_param(tag="refPixelValueSandF", xml_str=irsa_xml)
+        print("val_str:", val_str)
+        retrieved[to_retrieve[tag]], _ = u.unit_str_to_float(val_str)
+    i = irsa_xml.find("extinction.tbl")
+    j = i + 14
+    substr = irsa_xml[i:i + 8]
+    while substr != "https://":
+        i -= 1
+        substr = irsa_xml[i:i + 8]
+    table_url = irsa_xml[i:j]
+    print("Retrieving bandpass extinction table from", table_url)
+    extinction = urllib.request.urlopen(table_url)
+    ext_str = extinction.read()
+    ext_str = str(ext_str, 'utf-8')
+    return retrieved, ext_str
+
+
+def save_irsa_extinction(ra: float, dec: float, output: str):
+    """
+    Retrieves the extinction per bandpass table for a given sky position from the IRSA Dust Tool
+    (https://irsa.ipac.caltech.edu/applications/DUST/) and writes it to disk.
+    :param ra: Right Ascension of the desired field, in degrees.
+    :param dec: Declination of the desired field, in degrees.
+    :param output: The location on disk to which to write the file.
+    :return: Tuple: dictionary of retrieved values, table-formatted string.
+    """
+    values, ext_str = retrieve_irsa_extinction(ra=ra, dec=dec)
+    with open(output, "w") as file:
+        file.write(ext_str)
+    return values, ext_str
+
+
+def update_frb_irsa_extinction(frb: str):
+    """
+    Retrieves the extinction per bandpass table, and other relevant parameters, for a given sky position from the
+    IRSA Dust Tool (https://irsa.ipac.caltech.edu/applications/DUST/) and writes it to disk.
+    :param frb: FRB name, FRBXXXXXX. Must match title of param file.
+    :return: Tuple: dictionary of retrieved values, table-formatted string.
+    """
+    params = p.object_params_frb(frb)
+    data_dir = params['data_dir']
+    values, ext_str = save_irsa_extinction(ra=params['burst_ra'], dec=params['burst_dec'], output=data_dir + "galactic_extinction.txt")
+    p.add_output_values_frb(obj=frb, params=values)
+    return values, ext_str
