@@ -12,6 +12,14 @@ import astropy.io.fits as fits
 # TODO: Arrange these into some kind of logical order.
 # TODO: Also comment.
 
+def sort_dict_by_value(dictionary: dict):
+    sorted_keys = sorted(dictionary, key=dictionary.get)
+    sorted_dict = {}
+    for f in sorted_keys:
+        sorted_dict[f] = dictionary[f]
+    return sorted_dict
+
+
 def check_trailing_slash(path: str):
     """
     Adds a slash to the end of a string if it is missing.
