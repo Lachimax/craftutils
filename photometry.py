@@ -1,7 +1,6 @@
-# Code by Lachlan Marnoch, 2019
+# Code by Lachlan Marnoch, 2019-2021
 
 import os
-import shutil
 import math
 from typing import Union
 

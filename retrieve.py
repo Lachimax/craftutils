@@ -1,7 +1,9 @@
-# Code by Lachlan Marnoch, 2020
+# Code by Lachlan Marnoch, 2021
 
 import urllib
 from datetime import date
+from typing import Union
+from astropy.coordinates import SkyCoord
 
 from craftutils import params as p
 from craftutils import utils as u

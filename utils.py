@@ -1,4 +1,4 @@
-# Code by Lachlan Marnoch, 2019
+# Code by Lachlan Marnoch, 2019-2021
 
 from datetime import datetime as dt
 import numpy as np

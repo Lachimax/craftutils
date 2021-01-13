@@ -1,3 +1,5 @@
+# Code by Lachlan Marnoch, 2019
+
 from astropy import table
 from astropy.io import fits
 from astropy import wcs
