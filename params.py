@@ -308,6 +308,22 @@ def instrument_all_filters(instrument: str = 'FORS2', quiet: bool = False):
     return filters
 
 
+def instrument_filters_single_param(param: str, instrument: str = 'FORS2', sort_value: bool = False,
+                                    quiet: bool = False):
+    filters = instrument_all_filters(instrument=instrument, quiet=quiet)
+    filter_names = list(filters.keys())
+
+    param_dict = {}
+    for f in filter_names:
+        f_params = filters[f]
+        param_dict[f] = f_params[param]
+
+    if sort_value:
+        param_dict = u.sort_dict_by_value(param_dict)
+
+    return param_dict
+
+
 def object_params_instrument(obj: str, instrument: str, quiet: bool = False):
     instrument = instrument.lower()
     return load_params(param_path + f'epochs_{instrument}/{obj}', quiet=quiet)
