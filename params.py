@@ -7,7 +7,7 @@ import os
 import numpy as np
 import astropy.table as tbl
 
-from craftutils.utils import sanitise_file_ext, find_nearest, numpy_to_list, check_trailing_slash
+from craftutils import utils as u
 
 
 def check_for_config():
@@ -20,7 +20,7 @@ def check_for_config():
 
 
 def load_params(file: str, quiet: bool = False):
-    file = sanitise_file_ext(file, '.yaml')
+    file = u.sanitise_file_ext(file, '.yaml')
 
     if not quiet:
         print('Loading parameter file from ' + str(file))
@@ -48,9 +48,9 @@ def save_params(file: str, dictionary: dict, quiet: bool = False):
 
 
 def yaml_to_json(yaml_file: str, output: str = None, quiet: bool = False):
-    yaml_file = sanitise_file_ext(yaml_file, '.yaml')
+    yaml_file = u.sanitise_file_ext(yaml_file, '.yaml')
     if output is not None:
-        output = sanitise_file_ext(output, '.json')
+        output = u.sanitise_file_ext(output, '.json')
     elif output is None:
         output = yaml_file.replace('.yaml', '.json')
 
@@ -66,7 +66,7 @@ def yaml_to_json(yaml_file: str, output: str = None, quiet: bool = False):
 
 
 config = check_for_config()
-param_path = check_trailing_slash(config['param_dir'])
+param_path = u.check_trailing_slash(config['param_dir'])
 
 
 def path_or_params_obj(obj: Union[dict, str], instrument: str = 'FORS2', quiet: bool = False):
@@ -99,7 +99,7 @@ def change_yaml_param(file: str = 'project', param: str = None, value=None, upda
 
 
 def add_params(file: str, params: dict, quiet: bool = False):
-    file = sanitise_file_ext(file, '.yaml')
+    file = u.sanitise_file_ext(file, '.yaml')
     if os.path.isfile(file):
         param_dict = load_params(file)
     else:
@@ -186,14 +186,14 @@ def ingest_filter_properties(path: str, instrument: str, quiet: bool = False):
         params['name'] = name
         params['instrument'] = instrument
 
-    params['mjd'] = numpy_to_list(data['mjd_obs'])
-    params['date'] = numpy_to_list(data['civil_date'])
-    params['zeropoint'] = numpy_to_list(data['zeropoint'])
-    params['zeropoint_err'] = numpy_to_list(data['zeropoint_err'])
-    params['colour_term'] = numpy_to_list(data['colour_term'])
-    params['colour_term_err'] = numpy_to_list(data['colour_term_err'])
-    params['extinction'] = numpy_to_list(data['extinction'])
-    params['extinction_err'] = numpy_to_list(data['extinction_err'])
+    params['mjd'] = u.numpy_to_list(data['mjd_obs'])
+    params['date'] = u.numpy_to_list(data['civil_date'])
+    params['zeropoint'] = u.numpy_to_list(data['zeropoint'])
+    params['zeropoint_err'] = u.numpy_to_list(data['zeropoint_err'])
+    params['colour_term'] = u.numpy_to_list(data['colour_term'])
+    params['colour_term_err'] = u.numpy_to_list(data['colour_term_err'])
+    params['extinction'] = u.numpy_to_list(data['extinction'])
+    params['extinction_err'] = u.numpy_to_list(data['extinction_err'])
 
     save_params(file=param_path + f'filters/{instrument}-{name}', dictionary=params)
 
@@ -446,7 +446,7 @@ def refresh_params_all(quiet=False):
 
 
 def refresh_params_folder(folder: str, template: str, quiet: bool = False):
-    template = sanitise_file_ext(template, '.yaml')
+    template = u.sanitise_file_ext(template, '.yaml')
     files = filter(lambda x: x[-5:] == '.yaml' and x != template, os.listdir(param_path + '' + folder + '/'))
     # Get template file from within this project; use to update param files in param directory as specified in
     # config.yaml
@@ -547,8 +547,8 @@ def trim_transmission_curves(f: str, instrument: str, lambda_min: float, lambda_
     wavelengths = file_params['wavelengths']
     if len(wavelengths) > 0:
         transmissions = file_params['transmissions']
-        arg_lambda_min, _ = find_nearest(np.array(wavelengths), lambda_min, sorted=True)
-        arg_lambda_max, _ = find_nearest(np.array(wavelengths), lambda_max, sorted=True)
+        arg_lambda_min, _ = u.find_nearest(np.array(wavelengths), lambda_min, sorted=True)
+        arg_lambda_max, _ = u.find_nearest(np.array(wavelengths), lambda_max, sorted=True)
         arg_lambda_max += 1
         file_params['transmissions'] = transmissions[arg_lambda_min:arg_lambda_max]
         file_params['wavelengths'] = wavelengths[arg_lambda_min:arg_lambda_max]
@@ -556,8 +556,8 @@ def trim_transmission_curves(f: str, instrument: str, lambda_min: float, lambda_
     wavelengths = file_params['wavelengths_filter_only']
     if len(wavelengths) > 0:
         transmissions = file_params['transmissions_filter_only']
-        arg_lambda_min, _ = find_nearest(np.array(wavelengths), lambda_min, sorted=True)
-        arg_lambda_max, _ = find_nearest(np.array(wavelengths), lambda_max, sorted=True)
+        arg_lambda_min, _ = u.find_nearest(np.array(wavelengths), lambda_min, sorted=True)
+        arg_lambda_max, _ = u.find_nearest(np.array(wavelengths), lambda_max, sorted=True)
         arg_lambda_max += 1
         file_params['transmissions_filter_only'] = transmissions[arg_lambda_min:arg_lambda_max]
         file_params['wavelengths_filter_only'] = wavelengths[arg_lambda_min:arg_lambda_max]
