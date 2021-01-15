@@ -362,10 +362,14 @@ def subtract(hdu, subtract_hdu):
     return data_prime - data_sub
 
 
-def subtract_file(file: str, sub_file: 'str', output: 'str' = None):
+def subtract_file(file: str, sub_file: str, output: str = None):
     hdu = fits.open(file)
     sub_hdu = fits.open(sub_file)
     subbed = hdu
+
+    print(f"Subtracting:")
+    print("\t"+sub_file, "from")
+    print("\t"+file)
 
     subbed[0].data = subtract(hdu=hdu, subtract_hdu=sub_hdu)
 
