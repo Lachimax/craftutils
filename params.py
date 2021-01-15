@@ -385,6 +385,21 @@ def single_param_all_epochs(obj: str, param: str, instrument: str = 'FORS2', qui
     return output
 
 
+def frb_output_params(obj: str, quiet: bool = False):
+    """
+
+    :param obj: The FRB title, FRBXXXXXX
+    :return:
+    """
+    p = object_params_frb(obj=obj, quiet=quiet)
+    if p is None:
+        return None
+    else:
+        return load_params(p['data_dir'] + 'output_values', quiet=quiet)
+
+
+# TODO: Object should be epoch, almost everywhere.
+
 def object_output_params(obj: str, instrument: str = 'FORS2', quiet: bool = False):
     """
 
