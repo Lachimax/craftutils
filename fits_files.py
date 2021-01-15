@@ -839,6 +839,8 @@ def fits_table(input_path: str, output_path: str = "", science_only: bool = True
         for f in files:
             if f[-7:] == ".NL.txt":
                 files_fits.append(f.replace(".NL.txt", ".fits"))
+            elif f[-12:] == "_raw2raw.xml":
+                files_fits.append(f.replace("_raw2raw.xml", ".fits"))
     else:
         for f in files:
             if f[-5:] == ".fits":
