@@ -938,8 +938,7 @@ def fits_table_all(input_path: str, output_path: str = "", science_only: bool = 
     """
 
     # If there's no trailing slash in the paths, add one.
-    if input_path[-1] != "/":
-        input_path = input_path + "/"
+    u.check_trailing_slash(output_path)
 
     if output_path == "":
         output_path = input_path + "fits_table.csv"
