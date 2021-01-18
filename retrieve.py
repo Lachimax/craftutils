@@ -8,6 +8,8 @@ from astropy.coordinates import SkyCoord
 from craftutils import params as p
 from craftutils import utils as u
 
+keys = p.keys()
+
 fors2_filters_retrievable = ["I_BESS", "R_SPEC", "b_HIGH", "v_HIGH"]
 sdss_filters = ["u", "g", "r", "i", "z"]
 
@@ -113,7 +115,6 @@ def retrieve_sdss_photometry(ra: float, dec: float):
         return None
 
     print(f"Querying SDSS DR16 archive for field centring on RA={ra}, DEC={dec}")
-    keys = p.keys()
     user = keys['sciserver_user']
     password = keys["sciserver_pwd"]
     Authentication.login(UserName=user, Password=password)
@@ -240,6 +241,7 @@ def save_irsa_extinction(ra: float, dec: float, output: str):
     :return: Tuple: dictionary of retrieved values, table-formatted string.
     """
     values, ext_str = retrieve_irsa_extinction(ra=ra, dec=dec)
+    ext_str = ext_str.replace("microns", "um")
     with open(output, "w") as file:
         file.write(ext_str)
     return values, ext_str
@@ -254,6 +256,7 @@ def update_frb_irsa_extinction(frb: str):
     """
     params = p.object_params_frb(frb)
     data_dir = params['data_dir']
-    values, ext_str = save_irsa_extinction(ra=params['burst_ra'], dec=params['burst_dec'], output=data_dir + "galactic_extinction.txt")
+    values, ext_str = save_irsa_extinction(ra=params['burst_ra'], dec=params['burst_dec'],
+                                           output=data_dir + "galactic_extinction.txt")
     p.add_output_values_frb(obj=frb, params=values)
     return values, ext_str
