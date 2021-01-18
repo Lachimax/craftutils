@@ -368,8 +368,8 @@ def subtract_file(file: str, sub_file: str, output: str = None):
     subbed = hdu
 
     print(f"Subtracting:")
-    print("\t"+sub_file, "from")
-    print("\t"+file)
+    print("\t" + sub_file, "from")
+    print("\t" + file)
 
     subbed[0].data = subtract(hdu=hdu, subtract_hdu=sub_hdu)
 
@@ -839,16 +839,10 @@ def fits_table(input_path: str, output_path: str = "", science_only: bool = True
     files_fits = []
 
     # Keep only the relevant fits files
-    if science_only:  # Ignore calibration files - science files will have an associated ".NL.txt" file.
-        for f in files:
-            if f[-7:] == ".NL.txt":
-                files_fits.append(f.replace(".NL.txt", ".fits"))
-            elif f[-12:] == "_raw2raw.xml":
-                files_fits.append(f.replace("_raw2raw.xml", ".fits"))
-    else:
-        for f in files:
-            if f[-5:] == ".fits":
-                files_fits.append(f)
+
+    for f in files:
+        if f[-5:] == ".fits":
+            files_fits.append(f)
 
     # Create list of dictionaries to be used as the output data
     output = []
@@ -864,6 +858,8 @@ def fits_table(input_path: str, output_path: str = "", science_only: bool = True
         file = fits.open(input_path + f)
         header = file[0].header
         data['identifier'] = f
+        if science_only and ('ESO DPR CATG' not in header or 'SCIENCE' not in header['ESO DPR CATG']):
+            continue
         if len(ids) >= len(files_fits):
             data['id'] = ids[i]
         if "OBJECT" in header:
