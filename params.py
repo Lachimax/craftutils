@@ -74,7 +74,7 @@ def path_or_params_obj(obj: Union[dict, str], instrument: str = 'FORS2', quiet: 
         return obj, object_params_instrument(obj, instrument=instrument, quiet=quiet)
     elif type(obj) is dict:
         params = obj
-        obj = params['data_title']
+        obj = params['data_title'] # TODO: This is broken since you removed data_title from epoch params.
         return obj, params
 
 
