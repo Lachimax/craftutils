@@ -79,6 +79,21 @@ def mkdir_check(path: str):
         os.mkdir(path)
 
 
+def mkdir_check_nested(path: str):
+    """
+    Does mkdir_check, but for all parent directories of the given path.
+    :param path:
+    :return:
+    """
+    i = 1
+    while i < len(path):
+        if path[i] == "/":
+            if i + 1 == len(path) or path[i + 1] != "/":
+                subpath = path[0:i]
+                mkdir_check(subpath)
+        i += 1
+
+
 def fwhm_to_std(fwhm: float):
     return fwhm / 2.355
 
