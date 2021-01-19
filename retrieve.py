@@ -282,7 +282,7 @@ def des_login():
         data={
             'username': keys['des_user'],
             'password': keys['des_pwd'],
-            'database': keys['database']
+            'database': 'desdr'
         }
     )
     # Store the JWT auth token
