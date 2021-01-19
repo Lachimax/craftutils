@@ -207,6 +207,9 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
         sextractor_names_mod[sextractor_names.index('dec')] = 'dec_cat'
         cat = table.Table(np.genfromtxt(cat_path, names=sextractor_names_mod))
 
+    if len(cat) == 0:
+        raise ValueError("The reference catalogue is empty.")
+
     params['time'] = dt.now().strftime('%Y-%m-%dT%H:%M:%S')
     params['catalogue'] = cat_name
     params['airmass'] = ff.get_airmass(image)
