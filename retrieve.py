@@ -13,7 +13,6 @@ from craftutils import utils as u
 keys = p.keys()
 
 fors2_filters_retrievable = ["I_BESS", "R_SPEC", "b_HIGH", "v_HIGH"]
-sdss_filters = ["u", "g", "r", "i", "z"]
 
 
 def retrieve_fors2_calib(fil: str = 'I_BESS', date_from: str = '2017-01-01', date_to: str = None):
@@ -98,96 +97,6 @@ def update_fors2_calib():
         p.ingest_filter_properties(path=p.config['photom_calib_dir'] + fil + '.txt', instrument='FORS2')
 
 
-def retrieve_sdss_photometry(ra: float, dec: float):
-    """
-    Retrieve SDSS photometry for a given field, in a 0.1 x 0.1 degree box centred on the passed coordinates
-    coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical distortion)
-    :param ra: Right Ascension of the centre of the desired field, in degrees.
-    :param dec: Declination of the centre of the desired field, in degrees.
-    :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
-    """
-    try:
-        from SciServer import Authentication, CasJobs
-    except ImportError:
-        print("It seems that SciScript/SciServer is not installed, or not accessible to this environment. "
-              "\nIf you wish to automatically download SDSS data, please install "
-              "\nSciScript (https://github.com/sciserver/SciScript-Python); "
-              "\notherwise, retrieve the data manually from "
-              "\nhttp://skyserver.sdss.org/dr16/en/tools/search/sql.aspx")
-        return None
-
-    print(f"Querying SDSS DR16 archive for field centring on RA={ra}, DEC={dec}")
-    user = keys['sciserver_user']
-    password = keys["sciserver_pwd"]
-    Authentication.login(UserName=user, Password=password)
-    # Construct an SQL query to send to SciServer
-    query = "SELECT objid,ra,dec"
-    for f in sdss_filters:
-        query += f",psfMag_{f},psfMagErr_{f},fiberMag_{f},fiberMagErr_{f},fiber2Mag_{f},fiber2MagErr_{f},petroMag_{f},petroMagErr_{f}"
-    query += " FROM PhotoObj "
-    query += f"WHERE ra BETWEEN {ra - 0.1} AND {ra + 0.1} "
-    query += f"AND dec BETWEEN {dec - 0.1} AND {dec + 0.1} "
-    print("Retrieving photometry from SDSS DR16 via SciServer...")
-    df = CasJobs.executeQuery(sql=query, context='DR16')
-    return df
-
-
-def save_sdss_photometry(ra: float, dec: float, output: str):
-    """
-    Retrieves and writes to disk the SDSS photometry for a given field, in a 0.1 x 0.1 degree box
-    centred on the field coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical
-    distortion)
-    :param ra: Right Ascension of the centre of the desired field, in degrees.
-    :param dec: Declination of the centre of the desired field, in degrees.
-    :param output: The location on disk to which to write the file.
-    :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
-    """
-    df = retrieve_sdss_photometry(ra=ra, dec=dec)
-    if df is not None:
-        print("Saving SDSS photometry to" + output)
-        df.to_csv(output)
-        return df
-    else:
-        print("No data retrieved from SDSS.")
-        return None
-
-
-def update_std_sdss_photometry(ra: float, dec: float):
-    """
-    Retrieves and writes to disk the SDSS photometry for a standard-star calibration field, in a 0.1 x 0.1 degree box
-    centred on the field coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical
-    distortion)
-    :param ra: Right Ascension of the centre of the desired field, in degrees.
-    :param dec: Declination of the centre of the desired field, in degrees.
-    :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
-    """
-    data_dir = p.config['top_data_dir']
-    path = f"{data_dir}/std_fields/RA{ra}_DEC{dec}/"
-    u.mkdir_check(path)
-    path += "SDSS/"
-    u.mkdir_check(path)
-    path += "SDSS.csv"
-
-    return save_sdss_photometry(ra=ra, dec=dec, output=path)
-
-
-def update_frb_sdss_photometry(frb: str):
-    """
-    Retrieve SDSS photometry for the field of an FRB (with a valid param file in param_dir), in a 0.1 x 0.1 degree box
-    centred on the FRB coordinates, and
-    (Note - the width of the box is in RA degrees, not corrected for spherical distortion)
-    :param frb: FRB name, FRBXXXXXX. Must match title of param file.
-    :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
-    """
-    params = p.object_params_frb(frb)
-    data_dir = params['data_dir']
-    path = data_dir + "SDSS/"
-    u.mkdir_check(path)
-    path += "SDSS.csv"
-    df = save_sdss_photometry(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
-    return df
-
-
 def retrieve_irsa_xml(ra: float, dec: float):
     """
     Retrieves the extinction parameters for a given sky position from the IRSA Dust Tool
@@ -264,15 +173,106 @@ def update_frb_irsa_extinction(frb: str):
     return values, ext_str
 
 
+sdss_filters = ["u", "g", "r", "i", "z"]
+
+
+def retrieve_sdss_photometry(ra: float, dec: float):
+    """
+    Retrieve SDSS photometry for a given field, in a 0.2 x 0.2 degree box centred on the passed coordinates
+    coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical distortion)
+    :param ra: Right Ascension of the centre of the desired field, in degrees.
+    :param dec: Declination of the centre of the desired field, in degrees.
+    :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
+    """
+    try:
+        from SciServer import Authentication, CasJobs
+    except ImportError:
+        print("It seems that SciScript/SciServer is not installed, or not accessible to this environment. "
+              "\nIf you wish to automatically download SDSS data, please install "
+              "\nSciScript (https://github.com/sciserver/SciScript-Python); "
+              "\notherwise, retrieve the data manually from "
+              "\nhttp://skyserver.sdss.org/dr16/en/tools/search/sql.aspx")
+        return None
+
+    print(f"Querying SDSS DR16 archive for field centring on RA={ra}, DEC={dec}")
+    user = keys['sciserver_user']
+    password = keys["sciserver_pwd"]
+    Authentication.login(UserName=user, Password=password)
+    # Construct an SQL query to send to SciServer
+    query = "SELECT objid,ra,dec"
+    for f in sdss_filters:
+        query += f",psfMag_{f},psfMagErr_{f},fiberMag_{f},fiberMagErr_{f},fiber2Mag_{f},fiber2MagErr_{f},petroMag_{f},petroMagErr_{f} "
+    query += "FROM PhotoObj "
+    query += f"WHERE ra BETWEEN {ra - 0.1} AND {ra + 0.1} "
+    query += f"AND dec BETWEEN {dec - 0.1} AND {dec + 0.1} "
+    print(f"Retrieving photometry from SDSS DR16 via SciServer for field at {ra}, {dec}...")
+    df = CasJobs.executeQuery(sql=query, context='DR16')
+    if len(df.index) == 0:
+        df = None
+    return df
+
+
+def save_sdss_photometry(ra: float, dec: float, output: str):
+    """
+    Retrieves and writes to disk the SDSS photometry for a given field, in a 0.2 x 0.2 degree box
+    centred on the field coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical
+    distortion)
+    :param ra: Right Ascension of the centre of the desired field, in degrees.
+    :param dec: Declination of the centre of the desired field, in degrees.
+    :param output: The location on disk to which to write the file.
+    :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
+    """
+    df = retrieve_sdss_photometry(ra=ra, dec=dec)
+    if df is not None:
+        u.mkdir_check_nested(path=output)
+        print("Saving SDSS photometry to" + output)
+        df.to_csv(output)
+    else:
+        print("No data retrieved from SDSS.")
+    return df
+
+
+def update_std_sdss_photometry(ra: float, dec: float):
+    """
+    Retrieves and writes to disk the SDSS photometry for a standard-star calibration field, in a 0.2 x 0.2 degree box
+    centred on the field coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical
+    distortion)
+    :param ra: Right Ascension of the centre of the desired field, in degrees.
+    :param dec: Declination of the centre of the desired field, in degrees.
+    :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
+    """
+    data_dir = p.config['top_data_dir']
+    path = f"{data_dir}/std_fields/RA{ra}_DEC{dec}/"
+    path += "SDSS/SDSS.csv"
+
+    return save_sdss_photometry(ra=ra, dec=dec, output=path)
+
+
+def update_frb_sdss_photometry(frb: str):
+    """
+    Retrieve SDSS photometry for the field of an FRB (with a valid param file in param_dir), in a 0.2 x 0.2 degree box
+    centred on the FRB coordinates, and
+    (Note - the width of the box is in RA degrees, not corrected for spherical distortion)
+    :param frb: FRB name, FRBXXXXXX. Must match title of param file.
+    :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
+    """
+    params = p.object_params_frb(frb)
+    data_dir = params['data_dir']
+    path = data_dir + "SDSS/SDSS.csv"
+    df = save_sdss_photometry(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
+    return df
+
+
 # Dark Energy Survey database functions adapted code by T. Andrew Manning, from
 # https://github.com/des-labs/desaccess-docs/blob/master/_static/DESaccess_API_example.ipynb
 
 des_url = 'https://des.ncsa.illinois.edu'
 des_api_url = des_url + "/desaccess/api"
 des_files_url = des_url + "/files-desaccess"
+des_filters = ['g', 'r', 'i', 'z', 'Y']
 
 
-def des_login():
+def login_des():
     """
     Obtains an auth token using the username and password credentials for a given database.
     """
@@ -290,15 +290,15 @@ def des_login():
     return keys['des_auth_token']
 
 
-def des_check_auth_token():
+def check_auth_token_des():
     if 'des_auth_token' not in keys:
         raise KeyError("Use des_login() to log in before submitting requests.")
 
 
-def des_submit_cutout_job(data: dict):
+def submit_cutout_job_des(data: dict):
     """Submits a query job and returns the complete server response which includes the job ID."""
 
-    des_check_auth_token()
+    check_auth_token_des()
 
     # Submit job
     r = requests.put(
@@ -306,12 +306,12 @@ def des_submit_cutout_job(data: dict):
         data=data,
         headers={'Authorization': f'Bearer {keys["auth_token"]}'}
     )
-    response = des_check_success(r)
+    response = check_success_des(r)
 
     return response
 
 
-def des_check_success(response: requests.Response):
+def check_success_des(response: requests.Response):
     response = response.json()
 
     if response['status'] == 'ok':
@@ -325,10 +325,10 @@ def des_check_success(response: requests.Response):
     return response
 
 
-def des_submit_query_job(query):
+def submit_query_job_des(query):
     """Submits a query job and returns the complete server response which includes the job ID."""
 
-    des_check_auth_token()
+    check_auth_token_des()
 
     # Specify API request parameters
     data = {
@@ -344,21 +344,19 @@ def des_submit_query_job(query):
         data=data,
         headers={'Authorization': f'Bearer {keys["des_auth_token"]}'}
     )
-    response = des_check_success(response=r)
+    response = check_success_des(response=r)
 
     return response
 
 
-def des_get_job_status(job_id):
+def get_job_status_des(job_id):
     """Returns the current status of the job identified by the unique job_id."""
 
-    des_check_auth_token()
+    check_auth_token_des()
 
     r = requests.post(
         f'{des_api_url}/job/status',
-        data={
-            'job-id': job_id
-        },
+        data={'job-id': job_id},
         headers={'Authorization': f'Bearer {keys["des_auth_token"]}'}
     )
     response = r.json()
@@ -368,13 +366,13 @@ def des_get_job_status(job_id):
     return response
 
 
-def des_job_status_poll(job_id):
+def job_status_poll_des(job_id):
     print(f'Polling status of job "{job_id}"...', end='')
     job_status = ''
     response = None
     while job_status != 'ok':
         # Fetch the current job status
-        response = des_get_job_status(job_id)
+        response = get_job_status_des(job_id)
         # Quit polling if there is an error getting a status update
         if response['status'] != 'ok':
             break
@@ -389,18 +387,113 @@ def des_job_status_poll(job_id):
     return response
 
 
-def des_download_job_files(url, outdir):
-    os.makedirs(outdir, exist_ok=True)
+def download_job_files_des(url: str, output: str):
+    print("Checking or making directory", output)
+    os.makedirs(output, exist_ok=True)
     r = requests.get(f'{url}/json')
     for item in r.json():
         if item['type'] == 'directory':
             suburl = f'{url}/{item["name"]}'
-            subdir = f'{outdir}/{item["name"]}'
-            des_download_job_files(suburl, subdir)
+            subdir = f'{output}/{item["name"]}'
+            download_job_files_des(suburl, subdir)
         elif item['type'] == 'file':
-            data = requests.get('{}/{}'.format(url, item['name']))
-            with open('{}/{}'.format(outdir, item['name']), "wb") as file:
+            data = requests.get(f'{url}/{item["name"]}')
+            with open(f'{output}/{item["name"]}', "wb") as file:
                 file.write(data.content)
 
     response = r.json()
     return response
+
+
+def retrieve_query_csv_des(job_id: str):
+    """
+    Retrieves the .csv file produced from an SQL query previously submitted to DESaccess, if any exists.
+    :param job_id: The unique job id generated by DESaccess upon submission of the job.
+    :return: Retrieved photometry table, as a Bytes object, if successful; None if not.
+    """
+    url = f'{des_files_url}/{keys["des_user"]}/query/{job_id}/'
+    r = requests.get(f'{url}/json')
+    for item in r.json():
+        if '.csv' in item['name']:
+            data = requests.get(f'{url}/{item["name"]}')
+            return data.content
+    return None
+
+
+def retrieve_des_photometry(ra: float, dec: float):
+    """
+    Retrieve DES photometry for a given field, in a 0.2 x 0.2 degree box centred on the passed coordinates
+    coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical distortion)
+    :param ra: Right Ascension of the centre of the desired field, in degrees.
+    :param dec: Declination of the centre of the desired field, in degrees.
+    :return: Retrieved photometry table, as a Bytes object, if successful; None if not.
+    """
+    print(f"Querying DES DR2 archive for field centring on RA={ra}, DEC={dec}")
+    login_des()
+    query = f"SELECT * " \
+            f"FROM DR2_MAIN " \
+            f"WHERE " \
+            f"RA BETWEEN {ra - 0.1} and {ra + 0.1} and " \
+            f"DEC BETWEEN {dec - 0.1} and {dec + 0.1} and " \
+            f"ROWNUM < 10000 "
+    print('Submitting query job...')
+    response = submit_query_job_des(query)
+    # Store the unique job ID for the new job
+    job_id = response['jobid']
+    print(f'New job submitted: {job_id}')
+    response = job_status_poll_des(job_id)
+    if response['status'] == 'ok':
+        job_type = response['jobs'][0]['job_type']
+        job_id = response['jobs'][0]['job_id']
+        return retrieve_query_csv_des(job_id=job_id)
+
+
+def save_des_photometry(ra: float, dec: float, output: str):
+    """
+    Retrieves and writes to disk the DES photometry for a given field, in a 0.2 x 0.2 degree box
+    centred on the field coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical
+    distortion)
+    :param ra: Right Ascension of the centre of the desired field, in degrees.
+    :param dec: Declination of the centre of the desired field, in degrees.
+    :param output: The location on disk to which to write the file.
+    :return: True if successful, False if not.
+    """
+    data = retrieve_des_photometry(ra=ra, dec=dec)
+    if data is not None:
+        u.mkdir_check_nested(path=output)
+        print("Saving DES photometry to" + output)
+        with open(output, "wb") as file:
+            file.write(data)
+    else:
+        print('No data retrieved from DES.')
+    return data
+
+
+def update_std_des_photometry(ra: float, dec: float):
+    """
+    Retrieves and writes to disk the DES photometry for a standard-star calibration field, in a 0.2 x 0.2 degree box
+    centred on the field coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical
+    distortion)
+    :param ra: Right Ascension of the centre of the desired field, in degrees.
+    :param dec: Declination of the centre of the desired field, in degrees.
+    :return: True if successful, False if not.
+    """
+    data_dir = p.config['top_data_dir']
+    path = f"{data_dir}/std_fields/RA{ra}_DEC{dec}/"
+    path += "DES/DES.csv"
+
+    return save_des_photometry(ra=ra, dec=dec, output=path)
+
+
+def update_frb_des_photometry(frb: str):
+    """
+    Retrieve DES photometry for the field of an FRB (with a valid param file in param_dir), in a 0.2 x 0.2 degree box
+    centred on the FRB coordinates, and
+    (Note - the width of the box is in RA degrees, not corrected for spherical distortion)
+    :param frb: FRB name, FRBXXXXXX. Must match title of param file.
+    :return: True if successful, False if not.
+    """
+    params = p.object_params_frb(frb)
+    data_dir = params['data_dir']
+    path = data_dir + "DES/DES.csv"
+    return save_des_photometry(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
