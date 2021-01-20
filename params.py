@@ -482,7 +482,8 @@ def refresh_params_all(quiet=False):
 
 def refresh_params_folder(folder: str, template: str, quiet: bool = False):
     template = u.sanitise_file_ext(template, '.yaml')
-    files = filter(lambda x: x[-5:] == '.yaml' and x != template, os.listdir(param_path + '' + folder + '/'))
+    user_dir = f"{param_path}/{folder}/"
+    proj_dir = f"param/{folder}/"
     # Get template file from within this project; use to update param files in param directory as specified in
     # config.yaml
     if not quiet:
@@ -495,44 +496,47 @@ def refresh_params_folder(folder: str, template: str, quiet: bool = False):
     else:
         imacs = False
 
-    for file in files:
-        file_params = load_params(param_path + folder + '/' + file, quiet=quiet)
-        if not quiet:
-            print(param_path + folder + '/' + file)
-        if 'filters' in file_params:
-            per_filter = True
-            filter_trunc = []
-            filters = file_params['filters']
-            for f in filters:
-                if imacs:
-                    filter_trunc.append(f[-1:] + '_')
-                else:
-                    if len(f) > 1:
-                        filter_trunc.append(f[:2])
-                    else:
-                        filter_trunc.append(f + '_')
+    for path in [user_dir, proj_dir]:
+        files = filter(lambda x: x[-5:] == '.yaml' and x != template, os.listdir(path))
 
-        # Use template to insert missing parameters.
-        for param in template_params:
-            # Apply filter-specific parameters to all filters listed in 'filters'.
-            if per_filter and param[:2] == 'f_':
-                for f in filter_trunc:
-                    param_true = param.replace('f_', f, 1)
-                    if param_true not in file_params:
-                        file_params[param_true] = template_params[param]
-            elif param not in file_params:
-                file_params[param] = template_params[param]
-        # Use template to remove extraneous parameters.
-        new_file_params = {}
-        for param in file_params:
-            # Apply filter-specific parameters to all filters listed in 'filters'.
-            if per_filter and param[:2] in filter_trunc and param.replace(param[:2], 'f_', 1) in template_params:
-                new_file_params[param] = file_params[param]
-            elif param in template_params and param[:2] != 'f_':
-                new_file_params[param] = file_params[param]
-        save_params(param_path + folder + '/' + file, new_file_params, quiet=quiet)
-        p = yaml_to_json(param_path + folder + '/' + file, quiet=quiet)
-        save_params(param_path + folder + '/' + file, p, quiet=quiet)
+        for file in files:
+            file_params = load_params(path + file, quiet=quiet)
+            if not quiet:
+                print(path + file)
+            if 'filters' in file_params:
+                per_filter = True
+                filter_trunc = []
+                filters = file_params['filters']
+                for f in filters:
+                    if imacs:
+                        filter_trunc.append(f[-1:] + '_')
+                    else:
+                        if len(f) > 1:
+                            filter_trunc.append(f[:2])
+                        else:
+                            filter_trunc.append(f + '_')
+
+            # Use template to insert missing parameters.
+            for param in template_params:
+                # Apply filter-specific parameters to all filters listed in 'filters'.
+                if per_filter and param[:2] == 'f_':
+                    for f in filter_trunc:
+                        param_true = param.replace('f_', f, 1)
+                        if param_true not in file_params:
+                            file_params[param_true] = template_params[param]
+                elif param not in file_params:
+                    file_params[param] = template_params[param]
+            # Use template to remove extraneous parameters.
+            new_file_params = {}
+            for param in file_params:
+                # Apply filter-specific parameters to all filters listed in 'filters'.
+                if per_filter and param[:2] in filter_trunc and param.replace(param[:2], 'f_', 1) in template_params:
+                    new_file_params[param] = file_params[param]
+                elif param in template_params and param[:2] != 'f_':
+                    new_file_params[param] = file_params[param]
+            save_params(param_path + folder + '/' + file, new_file_params, quiet=quiet)
+            p = yaml_to_json(param_path + folder + '/' + file, quiet=quiet)
+            save_params(param_path + folder + '/' + file, p, quiet=quiet)
 
 
 def sanitise_wavelengths(quiet: bool = False):
