@@ -15,6 +15,9 @@ def check_for_config():
     if p is None:
         print("No config.yaml file found.")
     else:
+        for param in p:
+            p[param] = u.check_trailing_slash(p[param])
+        save_params('param/config.yaml', p)
         yaml_to_json('param/config.yaml')
     return p
 
@@ -37,8 +40,7 @@ def load_params(file: str, quiet: bool = False):
 
 
 def save_params(file: str, dictionary: dict, quiet: bool = False):
-    if file[-5:] != '.yaml':
-        file = file + '.yaml'
+    file = u.sanitise_file_ext(filename=file, ext=".yaml")
 
     if not quiet:
         print('Saving parameter file to ' + str(file))
@@ -74,7 +76,7 @@ def path_or_params_obj(obj: Union[dict, str], instrument: str = 'FORS2', quiet: 
         return obj, object_params_instrument(obj, instrument=instrument, quiet=quiet)
     elif type(obj) is dict:
         params = obj
-        obj = params['data_title'] # TODO: This is broken since you removed data_title from epoch params.
+        obj = params['data_title']  # TODO: This is broken since you removed data_title from epoch params.
         return obj, params
 
 
@@ -107,6 +109,11 @@ def add_params(file: str, params: dict, quiet: bool = False):
     param_dict.update(params)
     save_params(file, param_dict, quiet=quiet)
     yaml_to_json(file, quiet=quiet)
+
+
+def add_config_param(params: dict, quiet=False):
+    add_params(file="param/config.yaml", params=params, quiet=quiet)
+    params.config = check_for_config()
 
 
 def add_frb_param(obj: str, params: dict, quiet=False):
@@ -496,7 +503,11 @@ def refresh_params_folder(folder: str, template: str, quiet: bool = False):
     else:
         imacs = False
 
-    for path in [user_dir, proj_dir]:
+    paths = [user_dir]
+    if user_dir != proj_dir:
+        paths.append(proj_dir)
+
+    for path in paths:
         files = filter(lambda x: x[-5:] == '.yaml' and x != template, os.listdir(path))
 
         for file in files:
