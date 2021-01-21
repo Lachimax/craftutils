@@ -126,7 +126,6 @@ def retrieve_irsa_extinction(ra: float, dec: float):
     retrieved = {}
     for tag in to_retrieve:
         val_str = u.extract_xml_param(tag="refPixelValueSandF", xml_str=irsa_xml)
-        print("val_str:", val_str)
         retrieved[to_retrieve[tag]], _ = u.unit_str_to_float(val_str)
     i = irsa_xml.find("extinction.tbl")
     j = i + 14
@@ -165,12 +164,16 @@ def update_frb_irsa_extinction(frb: str):
     :param frb: FRB name, FRBXXXXXX. Must match title of param file.
     :return: Tuple: dictionary of retrieved values, table-formatted string.
     """
-    params = p.object_params_frb(frb)
+    params = p.object_params_frb(obj=frb)
+    outputs = p.frb_output_params(obj=frb)
     data_dir = params['data_dir']
-    values, ext_str = save_irsa_extinction(ra=params['burst_ra'], dec=params['burst_dec'],
+    if 'E_B_V_SandF' not in outputs and not os.path.isfile(data_dir + "galactic_extinction.txt"):
+        values, ext_str = save_irsa_extinction(ra=params['burst_ra'], dec=params['burst_dec'],
                                            output=data_dir + "galactic_extinction.txt")
-    p.add_output_values_frb(obj=frb, params=values)
-    return values, ext_str
+        p.add_output_values_frb(obj=frb, params=values)
+        return values, ext_str
+    else:
+        print("IRSA Dust Tool data already retrieved.")
 
 
 sdss_filters = ["u", "g", "r", "i", "z"]
@@ -232,7 +235,7 @@ def save_sdss_photometry(ra: float, dec: float, output: str):
     return df
 
 
-def update_std_sdss_photometry(ra: float, dec: float):
+def update_std_sdss_photometry(ra: float, dec: float, force: bool = False):
     """
     Retrieves and writes to disk the SDSS photometry for a standard-star calibration field, in a 0.2 x 0.2 degree box
     centred on the field coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical
@@ -242,13 +245,26 @@ def update_std_sdss_photometry(ra: float, dec: float):
     :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
     """
     data_dir = p.config['top_data_dir']
-    path = f"{data_dir}/std_fields/RA{ra}_DEC{dec}/"
-    path += "SDSS/SDSS.csv"
+    field_path = f"{data_dir}/std_fields/RA{ra}_DEC{dec}/"
+    outputs = p.load_params(field_path + "output_values")
+    if outputs is None or "in_sdss" not in outputs or force:
+        path = field_path + "SDSS/SDSS.csv"
+        response = save_sdss_photometry(ra=ra, dec=dec, output=path)
+        params = {}
+        if response is not None:
+            params["in_sdss"] = True
+        else:
+            params["in_sdss"] = False
+        p.add_params(file=field_path + "output_values", params=params)
+        return response
+    elif outputs["in_sdss"] is True:
+        print("There is already SDSS data present for this field.")
+        return True
+    else:
+        print("This field is not present in SDSS.")
 
-    return save_sdss_photometry(ra=ra, dec=dec, output=path)
 
-
-def update_frb_sdss_photometry(frb: str):
+def update_frb_sdss_photometry(frb: str, force:bool=False):
     """
     Retrieve SDSS photometry for the field of an FRB (with a valid param file in param_dir), in a 0.2 x 0.2 degree box
     centred on the FRB coordinates, and
@@ -257,11 +273,22 @@ def update_frb_sdss_photometry(frb: str):
     :return: Retrieved photometry table, as a pandas dataframe, if successful; if not, None.
     """
     params = p.object_params_frb(frb)
-    data_dir = params['data_dir']
-    path = data_dir + "SDSS/SDSS.csv"
-    df = save_sdss_photometry(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
-    return df
-
+    path = params['data_dir'] + "SDSS/SDSS.csv"
+    outputs = p.frb_output_params(obj=frb)
+    if outputs is None or "in_sdss" not in outputs or force:
+        response = save_sdss_photometry(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
+        params = {}
+        if response is not None:
+            params["in_sdss"] = True
+        else:
+            params["in_sdss"] = False
+        p.add_output_values_frb(obj=frb, params=params)
+        return response
+    elif outputs["in_sdss"] is True:
+        print("There is already SDSS data present for this field.")
+        return True
+    else:
+        print("This field is not present in SDSS.")
 
 # Dark Energy Survey database functions adapted code by T. Andrew Manning, from
 # https://github.com/des-labs/desaccess-docs/blob/master/_static/DESaccess_API_example.ipynb
@@ -396,9 +423,10 @@ def retrieve_query_csv_des(job_id: str):
     :return: Retrieved photometry table, as a Bytes object, if successful; None if not.
     """
     url = f'{des_files_url}/{keys["des_user"]}/query/{job_id}/'
+    print("Retrieving DES photometry from", url)
     r = requests.get(f'{url}/json')
     for item in r.json():
-        if item['name'][:-4] == '.csv':
+        if item['name'][-4:] == '.csv':
             data = requests.get(f'{url}/{item["name"]}')
             return data.content
     return None
@@ -452,7 +480,7 @@ def save_des_photometry(ra: float, dec: float, output: str):
     return data
 
 
-def update_std_des_photometry(ra: float, dec: float):
+def update_std_des_photometry(ra: float, dec: float, force: bool = False):
     """
     Retrieves and writes to disk the DES photometry for a standard-star calibration field, in a 0.2 x 0.2 degree box
     centred on the field coordinates. (Note - the width of the box is in RA degrees, not corrected for spherical
@@ -462,13 +490,26 @@ def update_std_des_photometry(ra: float, dec: float):
     :return: True if successful, False if not.
     """
     data_dir = p.config['top_data_dir']
-    path = f"{data_dir}/std_fields/RA{ra}_DEC{dec}/"
-    path += "DES/DES.csv"
+    field_path = f"{data_dir}/std_fields/RA{ra}_DEC{dec}/"
+    outputs = p.load_params(field_path + "output_values")
+    if outputs is None or "in_des" not in outputs or force:
+        path = field_path + "DES/DES.csv"
+        response = save_des_photometry(ra=ra, dec=dec, output=path)
+        params = {}
+        if response is not None:
+            params["in_des"] = True
+        else:
+            params["in_des"] = False
+        p.add_params(file=field_path + "output_values", params=params)
+        return response
+    elif outputs["in_des"] is True:
+        print("There is already DES data present for this field.")
+        return True
+    else:
+        print("This field is not present in DES.")
 
-    return save_des_photometry(ra=ra, dec=dec, output=path)
 
-
-def update_frb_des_photometry(frb: str):
+def update_frb_des_photometry(frb: str, force: bool = False):
     """
     Retrieve DES photometry for the field of an FRB (with a valid param file in param_dir), in a 0.2 x 0.2 degree box
     centred on the FRB coordinates, and download it to the appropriate data directory.
@@ -478,7 +519,22 @@ def update_frb_des_photometry(frb: str):
     """
     params = p.object_params_frb(frb)
     path = params['data_dir'] + "DES/DES.csv"
-    return save_des_photometry(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
+    outputs = p.frb_output_params(obj=frb)
+    if outputs is None or "in_des" not in outputs or force:
+        response = save_des_photometry(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
+        params = {}
+        print("Test response:", response)
+        if response is not None:
+            params["in_des"] = True
+        else:
+            params["in_des"] = False
+        p.add_output_values_frb(obj=frb, params=params)
+        return response
+    elif outputs["in_des"] is True:
+        print("There is already DES data present for this field.")
+        return True
+    else:
+        print("This field is not present in DES.")
 
 
 def submit_cutout_job_des(ra: float, dec: float):
