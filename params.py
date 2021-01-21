@@ -487,8 +487,8 @@ def refresh_params_folder(folder: str, template: str, quiet: bool = False):
     # Get template file from within this project; use to update param files in param directory as specified in
     # config.yaml
     if not quiet:
-        print(f'Loading template from param/{folder}/{template}')
-    template_params = load_params('param/' + folder + '/' + template, quiet=quiet)
+        print(f'Loading template from {proj_dir}/{template}')
+    template_params = load_params(proj_dir + template, quiet=quiet)
 
     per_filter = False
     if 'imacs' in folder:
