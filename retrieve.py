@@ -90,11 +90,14 @@ def update_fors2_calib():
     :return:
     """
     for fil in fors2_filters_retrievable:
-        path = p.config['photom_calib_dir'] + fil + '.txt'
-        save_fors2_calib(output=path, fil=fil)
         if fil == 'R_SPEC':
             fil = 'R_SPECIAL'
-        p.ingest_filter_properties(path=p.config['photom_calib_dir'] + fil + '.txt', instrument='FORS2')
+        path = p.config['top_data_dir'] + "photometry_calib/" + fil + '.txt'
+        if fil == 'R_SPECIAL':
+            fil = 'R_SPEC'
+        save_fors2_calib(output=path, fil=fil)
+
+        p.ingest_filter_properties(path=path, instrument='FORS2')
 
 
 def retrieve_irsa_xml(ra: float, dec: float):
@@ -169,7 +172,7 @@ def update_frb_irsa_extinction(frb: str):
     data_dir = params['data_dir']
     if 'E_B_V_SandF' not in outputs and not os.path.isfile(data_dir + "galactic_extinction.txt"):
         values, ext_str = save_irsa_extinction(ra=params['burst_ra'], dec=params['burst_dec'],
-                                           output=data_dir + "galactic_extinction.txt")
+                                               output=data_dir + "galactic_extinction.txt")
         p.add_output_values_frb(obj=frb, params=values)
         return values, ext_str
     else:
@@ -264,7 +267,7 @@ def update_std_sdss_photometry(ra: float, dec: float, force: bool = False):
         print("This field is not present in SDSS.")
 
 
-def update_frb_sdss_photometry(frb: str, force:bool=False):
+def update_frb_sdss_photometry(frb: str, force: bool = False):
     """
     Retrieve SDSS photometry for the field of an FRB (with a valid param file in param_dir), in a 0.2 x 0.2 degree box
     centred on the FRB coordinates, and
@@ -289,6 +292,7 @@ def update_frb_sdss_photometry(frb: str, force:bool=False):
         return True
     else:
         print("This field is not present in SDSS.")
+
 
 # Dark Energy Survey database functions adapted code by T. Andrew Manning, from
 # https://github.com/des-labs/desaccess-docs/blob/master/_static/DESaccess_API_example.ipynb
@@ -598,12 +602,21 @@ def save_des_cutout(ra: float, dec: float, output: str):
         return False
 
 
-def update_frb_des_cutout(frb: str):
+def update_frb_des_cutout(frb: str, force: bool = False):
     """
 
     :param frb:
     :return:
     """
-    params = p.object_params_frb(frb)
-    path = params['data_dir'] + "DES/0-data/"
-    return save_des_cutout(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
+    params = p.object_params_frb(obj=frb)
+    outputs = p.frb_output_params(obj=frb)
+    if "in_des" not in outputs:
+        update_frb_des_photometry(frb=frb)
+        outputs = p.frb_output_params(obj=frb)
+    if force or outputs["in_des"] is True:
+        path = params['data_dir'] + "DES/0-data/"
+        return save_des_cutout(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
+    else:
+        print("No DES cutout available for this position.")
+
+
