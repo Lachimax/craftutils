@@ -527,7 +527,6 @@ def update_frb_des_photometry(frb: str, force: bool = False):
     if outputs is None or "in_des" not in outputs or force:
         response = save_des_photometry(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
         params = {}
-        print("Test response:", response)
         if response is not None:
             params["in_des"] = True
         else:
@@ -613,10 +612,91 @@ def update_frb_des_cutout(frb: str, force: bool = False):
     if "in_des" not in outputs:
         update_frb_des_photometry(frb=frb)
         outputs = p.frb_output_params(obj=frb)
-    if force or outputs["in_des"] is True:
-        path = params['data_dir'] + "DES/0-data/"
-        return save_des_cutout(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
+
+    path = params['data_dir'] + "DES/0-data/"
+    files = os.listdir(path)
+    condition = False
+    for f in des_filters:
+        if f"{f.lower()}_cutout.fits" not in files:
+            condition = True
+    if force or condition:
+        if force or outputs["in_des"] is True:
+            return save_des_cutout(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
+        else:
+            print("No DES cutout available for this position.")
     else:
-        print("No DES cutout available for this position.")
+        print("DES cutout already downloaded.")
 
 
+def retrieve_skymapper_photometry(ra: float, dec: float):
+    print(f"\nQuerying SkyMapper DR3 archive for field centring on RA={ra}, DEC={dec}")
+    url = f"http://skymapper.anu.edu.au/sm-cone/aus/query?RA={ra}&DEC={dec}&SR=0.2&RESPONSEFORMAT=CSV"
+    response = requests.get(url).content
+    if response.find(b"\n") == len(response) + 1:
+        return None
+    else:
+        return response
+
+
+def save_skymapper_photometry(ra: float, dec: float, output: str):
+    response = retrieve_skymapper_photometry(ra=ra, dec=dec)
+    if response is not None:
+        u.mkdir_check_nested(path=output)
+        print("Saving SkyMapper photometry to" + output)
+        with open(output, "wb") as file:
+            file.write(response)
+    else:
+        print('No data retrieved from SkyMapper.')
+    return response
+
+
+def update_std_skymapper_photometry(ra: float, dec: float, force: bool = False):
+    data_dir = p.config['top_data_dir']
+    field_path = f"{data_dir}/std_fields/RA{ra}_DEC{dec}/"
+    outputs = p.load_params(field_path + "output_values")
+    if outputs is None or "in_skymapper" not in outputs or force:
+        path = field_path + "SkyMapper/SkyMapper.csv"
+        response = save_skymapper_photometry(ra=ra, dec=dec, output=path)
+        params = {}
+        if response is not None:
+            params["in_skymapper"] = True
+        else:
+            params["in_skymapper"] = False
+        p.add_params(file=field_path + "output_values", params=params)
+        return response
+    elif outputs["in_skymapper"] is True:
+        print("There is already SkyMapper data present for this field.")
+        return True
+    else:
+        print("This field is not present in SkyMapper.")
+
+
+def update_frb_skymapper_photometry(frb: str, force: bool = False):
+    """
+    Retrieve DES photometry for the field of an FRB (with a valid param file in param_dir), in a 0.2 deg radius cone
+    centred on the FRB coordinates, and download it to the appropriate data directory.
+    (Note - the width of the box is in RA degrees, not corrected for spherical distortion)
+    :param frb: FRB name, FRBXXXXXX. Must match title of param file.
+    :return: True if successful, False if not.
+    """
+    params = p.object_params_frb(frb)
+    path = params['data_dir'] + "SkyMapper/SkyMapper.csv"
+    outputs = p.frb_output_params(obj=frb)
+    if outputs is None or "in_skymapper" not in outputs or force:
+        response = save_skymapper_photometry(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
+        params = {}
+        if response is not None:
+            params["in_skymapper"] = True
+        else:
+            params["in_skymapper"] = False
+        p.add_output_values_frb(obj=frb, params=params)
+        return response
+    elif outputs["in_skymapper"] is True:
+        print("There is already SkyMapper data present for this field.")
+        return True
+    else:
+        print("This field is not present in SkyMapper.")
+
+
+def retrieve_skymapper_cutout(ra: float, dec: float):
+    url = "http://api.skymapper.nci.org.au/aus/siap/dr3/query?"
