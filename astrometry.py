@@ -308,7 +308,7 @@ def tweak(sextractor_path: str, destination: str, image_path: str, cat_path: str
 
 
 def tweak_final(sextractor_path: str, destination: str,
-                epoch: int, instrument: str,
+                epoch: str, instrument: str,
                 show: bool, tolerance: float = 10.,
                 output_suffix: str = 'astrometry', input_suffix='coadded',
                 stars_only: bool = False, path_add: str = 'subtraction_image',
@@ -332,10 +332,11 @@ def tweak_final(sextractor_path: str, destination: str,
     :return: None
     """
     u.mkdir_check(destination)
-    properties = p.object_params_instrument(epoch, instrument)
+    properties = p.object_params_instrument(obj=epoch, instrument=instrument)
+    frb_properties = p.object_params_frb(obj=epoch[:-2])
     cat_name = properties['cat_field_name']
     manual = properties['manual_astrometry'] and manual
-    cat_path = properties[cat_name.lower() + '_cat']
+    cat_path = frb_properties['data_dir'] + cat_name.upper() + "/" + cat_name.upper() + ".csv"
 
     if cat_path is not None:
 
