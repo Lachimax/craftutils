@@ -612,20 +612,19 @@ def update_frb_des_cutout(frb: str, force: bool = False):
     if "in_des" not in outputs:
         update_frb_des_photometry(frb=frb)
         outputs = p.frb_output_params(obj=frb)
-
-    path = params['data_dir'] + "DES/0-data/"
-    files = os.listdir(path)
-    condition = False
-    for f in des_filters:
-        if f"{f.lower()}_cutout.fits" not in files:
-            condition = True
-    if force or condition:
-        if force or outputs["in_des"] is True:
+    if force or outputs["in_des"]:
+        path = params['data_dir'] + "DES/0-data/"
+        files = os.listdir(path)
+        condition = False
+        for f in des_filters:
+            if f"{f.lower()}_cutout.fits" not in files:
+                condition = True
+        if force or condition:
             return save_des_cutout(ra=params['burst_ra'], dec=params['burst_dec'], output=path)
         else:
-            print("No DES cutout available for this position.")
+            print("DES cutout already downloaded.")
     else:
-        print("DES cutout already downloaded.")
+        print("No DES cutout available for this position.")
 
 
 def retrieve_skymapper_photometry(ra: float, dec: float):
