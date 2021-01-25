@@ -125,7 +125,7 @@ def retrieve_irsa_extinction(ra: float, dec: float):
     """
     irsa_xml = retrieve_irsa_xml(ra=ra, dec=dec)
 
-    to_retrieve = {"refPixelValueSandF": "E_B_V_SandF"}
+    to_retrieve = {"refPixelValueSandF": "dust_ebv"}
     retrieved = {}
     for tag in to_retrieve:
         val_str = u.extract_xml_param(tag="refPixelValueSandF", xml_str=irsa_xml)
@@ -170,7 +170,7 @@ def update_frb_irsa_extinction(frb: str):
     params = p.object_params_frb(obj=frb)
     outputs = p.frb_output_params(obj=frb)
     data_dir = params['data_dir']
-    if 'E_B_V_SandF' not in outputs and not os.path.isfile(data_dir + "galactic_extinction.txt"):
+    if 'dust_ebv' not in outputs and not os.path.isfile(data_dir + "galactic_extinction.txt"):
         values, ext_str = save_irsa_extinction(ra=params['burst_ra'], dec=params['burst_dec'],
                                                output=data_dir + "galactic_extinction.txt")
         p.add_output_values_frb(obj=frb, params=values)
