@@ -173,7 +173,7 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
     params = {}
 
     if type(image) is str:
-        params['image_path'] = image
+        params['image_path'] = str(image)
         image_path = image
         image = fits.open(image_path)
 
@@ -210,33 +210,33 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
     if len(cat) == 0:
         raise ValueError("The reference catalogue is empty.")
 
-    params['time'] = dt.now().strftime('%Y-%m-%dT%H:%M:%S')
-    params['catalogue'] = cat_name
-    params['airmass'] = ff.get_airmass(image)
+    params['time'] = str(dt.now().strftime('%Y-%m-%dT%H:%M:%S'))
+    params['catalogue'] = str(cat_name)
+    params['airmass'] = float(ff.get_airmass(image))
     print('Airmass:', params['airmass'])
-    params['exp_time'] = exp_time
-    params['pix_tol'] = pix_tol
-    params['ang_tol'] = tolerance
-    params['mag_cut_min'] = mag_range_cat_lower
-    params['mag_cut_max'] = mag_range_cat_upper
-    params['mag_tol'] = mag_tol
-    params['cat_path'] = cat_path
-    params['cat_ra_col'] = cat_ra_col
-    params['cat_dec_col'] = cat_dec_col
-    params['cat_flux_col'] = cat_mag_col
-    params['sextractor_path'] = sextractor_cat_path
-    params['sex_ra_col'] = sex_ra_col
-    params['sex_dec_col'] = sex_dec_col
-    params['sex_flux_col'] = flux_column
+    params['exp_time'] = float(exp_time)
+    params['pix_tol'] = float(pix_tol)
+    params['ang_tol'] = float(tolerance)
+    params['mag_cut_min'] = float(mag_range_cat_lower)
+    params['mag_cut_max'] = float(mag_range_cat_upper)
+    params['mag_tol'] = float(mag_tol)
+    params['cat_path'] = str(cat_path)
+    params['cat_ra_col'] = str(cat_ra_col)
+    params['cat_dec_col'] = str(cat_dec_col)
+    params['cat_flux_col'] = str(cat_mag_col)
+    params['sextractor_path'] = str(sextractor_cat_path)
+    params['sex_ra_col'] = str(sex_ra_col)
+    params['sex_dec_col'] = str(sex_dec_col)
+    params['sex_flux_col'] = str(flux_column)
     params['stars_only'] = stars_only
-    params['pix_scale_deg_image'] = pix_scale
-    params['pix_scale_arc_image'] = pix_scale * 60 * 60
-    params['y_lower'] = y_lower
-    params['y_upper'] = y_upper
-    params['cat_zeropoint'] = cat_zeropoint
-    params['cat_zeropoint_err'] = cat_zeropoint_err
+    params['pix_scale_deg_image'] = float(pix_scale)
+    params['pix_scale_arc_image'] = float(pix_scale * 60 * 60)
+    params['y_lower'] = float(y_lower)
+    params['y_upper'] = float(y_upper)
+    params['cat_zeropoint'] = float(cat_zeropoint)
+    params['cat_zeropoint_err'] = float(cat_zeropoint_err)
     if stars_only:
-        params['star_class_tol'] = star_class_tol
+        params['star_class_tol'] = float(star_class_tol)
 
     source_tbl = table.Table(np.genfromtxt(sextractor_cat_path, names=sextractor_names))
 
@@ -301,6 +301,9 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
     matches_cat_pix_x, matches_cat_pix_y = wcst.all_world2pix(matches[cat_ra_col], matches[cat_dec_col], 0, quiet=False)
 
     plt.imshow(image[0].data, origin='lower', norm=plotting.nice_norm(image[0].data))
+    # names = matches.colnames
+    # names.sort()
+    # print(names)
     plt.scatter(matches_cat_pix_x, matches_cat_pix_y, label=cat_name + 'Catalogue', c=matches[star_class_col])
     plt.colorbar()
     plt.legend()
@@ -318,36 +321,36 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
 
     remove = np.isnan(matches[cat_mag_col])
     print(sum(np.invert(remove)), 'matches after removing catalogue mag nans')
-    params['matches_2_nans_cat'] = sum(np.invert(remove))
+    params['matches_2_nans_cat'] = float(sum(np.invert(remove)))
 
     remove = remove + np.isnan(matches['mag'])
     print(sum(np.invert(remove)), 'matches after removing SExtractor mag nans')
-    params['matches_3_nans_sex'] = sum(np.invert(remove))
+    params['matches_3_nans_sex'] = float(sum(np.invert(remove)))
 
     remove = remove + (matches[sex_y_col] < y_lower)
     remove = remove + (matches[sex_y_col] > y_upper)
     print(sum(np.invert(remove)), 'matches after removing objects in y-exclusion zone')
-    params['matches_4_y_exclusion'] = sum(np.invert(remove))
+    params['matches_4_y_exclusion'] = float(sum(np.invert(remove)))
 
     remove = remove + (matches[cat_mag_col] < mag_range_cat_lower)
     print(sum(np.invert(remove)),
           'matches after removing objects objects with mags > ' + str(mag_range_cat_upper))
-    params['matches_5_cat_mag_upper'] = sum(np.invert(remove))
+    params['matches_5_cat_mag_upper'] = float(sum(np.invert(remove)))
 
     remove = remove + (mag_range_cat_upper < matches[cat_mag_col])
     print(sum(np.invert(remove)),
           'matches after removing objects objects with mags < ' + str(mag_range_cat_lower))
-    params['matches_6_cat_mag_lower'] = sum(np.invert(remove))
+    params['matches_6_cat_mag_lower'] = float(sum(np.invert(remove)))
 
     remove = remove + (matches['mag'] < mag_range_sex_lower)
     print(sum(np.invert(remove)),
           'matches after removing objects objects with SExtractor mags > ' + str(mag_range_sex_upper))
-    params['matches_7_sex_mag_upper'] = sum(np.invert(remove))
+    params['matches_7_sex_mag_upper'] = float(sum(np.invert(remove)))
 
     remove = remove + (mag_range_sex_upper < matches['mag'])
     print(sum(np.invert(remove)),
           'matches after removing objects objects with SExtractor mags < ' + str(mag_range_sex_lower))
-    params['matches_8_sex_mag_upper'] = sum(np.invert(remove))
+    params['matches_8_sex_mag_upper'] = float(sum(np.invert(remove)))
 
     if stars_only:
         if star_class_col == 'spread_model':
@@ -357,7 +360,7 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
         else:
             remove = remove + (matches[star_class_col] < star_class_tol)
             print(sum(np.invert(remove)), 'matches after removing non-stars (star_class < ' + str(star_class_tol) + ')')
-        params['matches_9_non_stars'] = sum(np.invert(remove))
+        params['matches_9_non_stars'] = float(sum(np.invert(remove)))
     keep_these = np.invert(remove)
     matches_clean = matches[keep_these]
 
@@ -371,7 +374,7 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
     # Plot remaining matches
     plt.imshow(image[0].data, origin='lower', norm=plotting.nice_norm(image[0].data))
     plt.scatter(matches_clean[sex_x_col], matches_clean[sex_y_col], label='SExtractor',
-                c=matches_clean['class_star'])  # c=matches_clean[star_class_col])
+                c=matches_clean[star_class_col])
     plt.colorbar()
     plt.legend()
     plt.title('Matches with ' + cat_name + ' Catalogue against image (Using SExtractor)')
@@ -389,8 +392,8 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
     linfit_ideal = 1. * matches_clean[cat_mag_col] + ideal_intercept
     params['linfit_unfixed'] = str(linfit)
     rmse = u.root_mean_squared_error(model_values=linfit_ideal, obs_values=matches_clean['mag'])
-    params['zeropoint_raw'] = -ideal_intercept
-    params['rmse_raw'] = rmse
+    params['zeropoint_raw'] = float(-ideal_intercept)
+    params['rmse_raw'] = float(rmse)
 
     plt.plot(matches_clean[cat_mag_col], linfit_array, c='red', label='Line of best fit')
     plt.scatter(matches_clean[cat_mag_col], matches_clean['mag'], c='blue')
@@ -427,8 +430,8 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
     params['linfit_slope'] = str(linfit[0])
     params['d_linfit_slope'] = str(abs(1. - float(linfit[0])))
     rmse = u.root_mean_squared_error(model_values=linfit_ideal, obs_values=matches_sub_outliers['mag'])
-    params['zeropoint_sub_outliers'] = -ideal_intercept
-    params['rmse_sub_outliers'] = rmse
+    params['zeropoint_sub_outliers'] = float(-ideal_intercept)
+    params['rmse_sub_outliers'] = float(rmse)
 
     plot_params = p.plotting_params()
     size_font = plot_params['size_font']
@@ -467,16 +470,13 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
         plt.show(plot)
     plt.close()
 
-    params['zeropoint_median'] = np.median(matches_sub_outliers['zeropoint_ind'])
-    params['zeropoint_median_err'] = 2 * np.std(matches_sub_outliers['zeropoint_ind'] + cat_zeropoint_err)
-    params['zeropoint_err'] = cat_zeropoint_err + params['rmse_sub_outliers']
+    params['zeropoint_median'] = float(np.median(matches_sub_outliers['zeropoint_ind']))
+    params['zeropoint_median_err'] = float(2 * np.std(matches_sub_outliers['zeropoint_ind'] + cat_zeropoint_err))
+    params['zeropoint_err'] = float(cat_zeropoint_err + params['rmse_sub_outliers'])
 
     matches.write(output_path + "matches.csv", format='ascii.csv')
-    if os.path.isfile(output_path + 'parameters'):
-        os.remove(output_path + 'parameters')
-    for par in params:
-        with open(output_path + 'parameters', 'a') as file:
-            file.write(par + ": " + str(params[par]) + "\n")
+    u.rm_check(output_path + 'parameters.yaml')
+    p.add_params(file=output_path + 'parameters.yaml', params=params)
 
     print('Zeropoint - kx: ' + str(params['zeropoint_sub_outliers']) + ' +/- ' + str(
         params['zeropoint_err']))
@@ -537,7 +537,7 @@ def aperture_photometry(data: np.ndarray, x: float, y: float, fwhm: float = 2.,
     # Set defaults for aperture and annulus size; if annulus sizes are not given, they default to a fixed value
     # above the aperture size. This is likely not advantageous, so do try to provide your own fixed values.
 
-    if r_type is 'fwhm':
+    if r_type == 'fwhm':
         if r_ap is None:
             r_ap = 5. * fwhm
         else:
@@ -553,7 +553,7 @@ def aperture_photometry(data: np.ndarray, x: float, y: float, fwhm: float = 2.,
         else:
             r_ann_out = r_ann_out * fwhm
 
-    elif r_type is 'abs':
+    elif r_type == 'abs':
         if r_ap is None:
             r_ap = 10.
         if r_ann_in is None:
