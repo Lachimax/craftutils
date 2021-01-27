@@ -2,6 +2,7 @@
 
 import os
 import shutil as sh
+from copy import deepcopy
 
 from astropy import wcs
 from astropy.nddata import CCDData
@@ -654,7 +655,7 @@ def world_to_pix(ra: "float", dec: "float", header: "fits.header.Header"):
 
 def trim(hdu: fits.hdu.hdulist.HDUList,
          left: 'int' = None, right: 'int' = None, bottom: 'int' = None, top: 'int' = None,
-         update_wcs=True):
+         update_wcs=True, in_place = False):
     """
 
     :param hdu:
@@ -680,13 +681,18 @@ def trim(hdu: fits.hdu.hdulist.HDUList,
     if top < bottom:
         raise ValueError('Improper inputs; top is smaller than bottom.')
 
+    if in_place:
+        new_hdu = hdu
+    else:
+        new_hdu = deepcopy(hdu)
+
     if update_wcs:
-        hdu[0].header['CRPIX1'] = hdu[0].header['CRPIX1'] - left
-        hdu[0].header['CRPIX2'] = hdu[0].header['CRPIX2'] - bottom
+        new_hdu[0].header['CRPIX1'] = hdu[0].header['CRPIX1'] - left
+        new_hdu[0].header['CRPIX2'] = hdu[0].header['CRPIX2'] - bottom
 
-    hdu[0].data = hdu[0].data[bottom:top, left:right]
+    new_hdu[0].data = hdu[0].data[bottom:top, left:right]
 
-    return hdu
+    return new_hdu
 
 
 def trim_ccddata(ccddata: CCDData,
