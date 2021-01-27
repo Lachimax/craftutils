@@ -161,7 +161,7 @@ def plot_difference(fig: plt.figure, path: str, obj: str, instrument: str,
     return fig
 
 
-def plot_subimage(fig: plt.figure, hdu: str, ra: float, dec: float,
+def plot_subimage(fig: plt.figure, hdu: Union[str, fits.HDUList], ra: float, dec: float,
                   frame: Union[int, float], world_frame: bool = False, title: str = None,
                   n: int = 1, n_x: int = 1, n_y: int = 1,
                   cmap: str = 'viridis', show_cbar: bool = False, stretch: str = 'sqrt', vmin: float = None,
@@ -171,6 +171,32 @@ def plot_subimage(fig: plt.figure, hdu: str, ra: float, dec: float,
                   show_coords: bool = True, ylabel: str = None,
                   font_size: int = 12,
                   reverse_y=False):
+    """
+
+    :param fig:
+    :param hdu:
+    :param ra:
+    :param dec:
+    :param frame: in pixels, or in arcsecs (?) if world_frame is True.
+    :param world_frame:
+    :param title:
+    :param n:
+    :param n_x:
+    :param n_y:
+    :param cmap:
+    :param show_cbar:
+    :param stretch:
+    :param vmin:
+    :param vmax:
+    :param show_grid:
+    :param ticks:
+    :param interval:
+    :param show_coords:
+    :param ylabel:
+    :param font_size:
+    :param reverse_y:
+    :return:
+    """
     print(hdu)
     hdu, path = ff.path_or_hdu(hdu=hdu)
 
@@ -465,9 +491,9 @@ def distance_bar(hdu: fits.hdu.HDUList, ang_size_distance: float, x: float, y: f
     print('Angular size:', angle_length, 'arcsecs')
 
     if reverse_y:
-        plt.plot((x, x + pix_length), (2*frame-y, 2*frame-y), c=colour)
-        plt.text(x, 2*frame - y - spread, f'{np.round(length / 1000, 1)} kpc', color=colour)
-        plt.text(x, 2*frame - y + 1.7 * spread, f'{int(angle_length)} arcsec', color=colour)
+        plt.plot((x, x + pix_length), (2 * frame - y, 2 * frame - y), c=colour)
+        plt.text(x, 2 * frame - y - spread, f'{np.round(length / 1000, 1)} kpc', color=colour)
+        plt.text(x, 2 * frame - y + 1.7 * spread, f'{int(angle_length)} arcsec', color=colour)
     else:
         plt.plot((x, x + pix_length), (y, y), c=colour)
         plt.text(x, y + spread, f'{np.round(length / 1000, 1)} kpc', color=colour)
@@ -551,7 +577,8 @@ def plot_gal_params(hdu: fits.HDUList, ras: Union[list, np.ndarray, float], decs
     for i, x in enumerate(xs):
         if a[i] != 0 and b[i] != 0:
             if world_axes:
-                ellipse = photutils.EllipticalAperture((x, ys[i]), a=a[i] / pix_scale, b=b[i] / pix_scale, theta=theta[i])
+                ellipse = photutils.EllipticalAperture((x, ys[i]), a=a[i] / pix_scale, b=b[i] / pix_scale,
+                                                       theta=theta[i])
             else:
                 ellipse = photutils.EllipticalAperture((x, ys[i]), a=a[i], b=b[i], theta=theta[i])
             ellipse.plot(color=colour, label=label, ls=line_style)
