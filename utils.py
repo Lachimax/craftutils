@@ -3,8 +3,10 @@
 from datetime import datetime as dt
 import numpy as np
 import math
-from astropy.coordinates import SkyCoord
 import os
+from typing import List
+
+from astropy.coordinates import SkyCoord
 import astropy.table as tbl
 import astropy.io.fits as fits
 
@@ -473,3 +475,35 @@ def unit_str_to_float(string: str):
     value = float(string[:string.find("(")])
     print("Value:", value)
     return value, units
+
+
+def select_option(message: str, options: List[str]):
+    print(message)
+    for i, opt in enumerate(options):
+        print(i, opt)
+    selection = None
+    picked = None
+    while selection is None or picked is None:
+        try:
+            selection = int(input())
+        except ValueError:
+            print("Invalid response. Please enter an integer.")
+        try:
+            picked = options[selection]
+        except IndexError:
+            print(f"Response is not in provided options. Please pick an integer between 0 and {len(options) - 1}")
+    print(f"You have selected {selection}: {picked}")
+    return picked
+
+
+def user_input(message: str, typ: type = str):
+    inp = None
+    print(message)
+    while type(inp) is not typ:
+        inp = input()
+        try:
+            inp = typ(inp)
+        except ValueError:
+            print(f"Could not cast {inp} to {typ}. Try again:")
+    print(f"You have entered {inp}.")
+    return inp
