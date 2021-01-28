@@ -363,18 +363,21 @@ def subtract(hdu, subtract_hdu):
     return data_prime - data_sub
 
 
-def subtract_file(file: str, sub_file: str, output: str = None):
-    hdu = fits.open(file)
-    sub_hdu = fits.open(sub_file)
-    subbed = hdu
-
+def subtract_file(file: Union[str, fits.HDUList], sub_file: Union[str, fits.HDUList], output: str = None,
+                  in_place=False):
+    hdu, path = path_or_hdu(hdu=file)
+    sub_hdu, sub_path = path_or_hdu(hdu=sub_file)
+    if in_place:
+        subbed = hdu
+    else:
+        subbed = deepcopy(hdu)
     print(f"Subtracting:")
-    print("\t" + sub_file, "from")
-    print("\t" + file)
+    print(f"\t {sub_path} from")
+    print(f"\t {path}")
 
     subbed[0].data = subtract(hdu=hdu, subtract_hdu=sub_hdu)
 
-    add_log(file=subbed, action='Subtracted ' + sub_file + ' from ' + file)
+    add_log(file=subbed, action=f'Subtracted {sub_path} from {path}')
 
     if output is not None:
         subbed.writeto(output, overwrite=True)
@@ -655,7 +658,7 @@ def world_to_pix(ra: "float", dec: "float", header: "fits.header.Header"):
 
 def trim(hdu: fits.hdu.hdulist.HDUList,
          left: 'int' = None, right: 'int' = None, bottom: 'int' = None, top: 'int' = None,
-         update_wcs=True, in_place = False):
+         update_wcs=True, in_place=False):
     """
 
     :param hdu:
