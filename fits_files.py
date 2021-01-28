@@ -58,9 +58,9 @@ def projected_pix_scale(hdu: Union[fits.HDUList, str], ang_size_distance: float)
 
 def path_or_hdu(hdu: Union[fits.HDUList, str], update=False):
     # TODO: Propagate this method to where it's needed.
-    path = False
+    path = None
     if type(hdu) is str:
-        path = True
+        path = hdu
         if update:
             hdu = fits.open(hdu, mode='update')
         else:
