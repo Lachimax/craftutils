@@ -3,6 +3,7 @@
 import os
 import math
 from typing import Union
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
@@ -12,7 +13,7 @@ import pylab as pl
 
 from astropy import stats
 from astropy import wcs
-from astropy.modeling import fitting
+from astropy.modeling import models, fitting
 from astropy.modeling.functional_models import Sersic1D
 import astropy.table as table
 from astropy.io import fits as fits
@@ -29,6 +30,28 @@ from craftutils import plotting
 
 # TODO: End-to-end pipeline script?
 # TODO: Change expected types to Union
+
+def fit_background_fits(image: Union[str, fits.HDUList], model_type='polynomial', deg: int = 2):
+    image, _ = ff.path_or_hdu(image)
+    data = image[0].data
+    background = fit_background(data=data, model_type=model_type, deg=deg)
+    background_image = deepcopy(image)
+    background_image[0].data = background
+    return background_image
+
+
+def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2):
+    accepted_models = ['polynomial', 'gaussian']
+    y, x = np.mgrid[:data.shape[0], :data.shape[1]]
+    if model_type.lower() == 'polynomial':
+        init = models.Polynomial2D(degree=deg)
+    elif model_type.lower() == 'gaussian':
+        init = models.Gaussian2D()
+    else:
+        raise ValueError("Unrecognised model; must be in", accepted_models)
+    fitter = fitting.LevMarLSQFitter()
+    model = fitter(init, x, y, data)
+    return model(x, y)
 
 
 def gain_median_combine(old_gain: float = 0.8, n_frames: int = 1):
