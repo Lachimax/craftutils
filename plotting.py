@@ -200,21 +200,7 @@ def plot_subimage(fig: plt.figure, hdu: Union[str, fits.HDUList], ra: float, dec
     print(hdu)
     hdu, path = ff.path_or_hdu(hdu=hdu)
 
-    wcs_image = wcs.WCS(header=hdu[0].header)
-    x, y = wcs_image.all_world2pix(ra, dec, 0)
-    _, scale = ff.get_pixel_scale(hdu)
-
-    if world_frame:
-        frame = frame / scale
-
-    left = int(x - frame)
-    right = int(x + frame)
-    top = int(y + frame)
-    bottom = int(y - frame)
-
-    print(hdu[0].data.shape)
-    hdu_cut = ff.trim(hdu=hdu, left=left, right=right, bottom=bottom, top=top)
-
+    hdu_cut = ff.trim_frame_point(hdu=hdu, ra=ra, dec=dec, frame=frame, world_frame=world_frame)
     wcs_cut = wcs.WCS(header=hdu_cut[0].header)
 
     print(n_y, n_x, n)
