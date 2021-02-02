@@ -31,12 +31,29 @@ from craftutils import plotting
 # TODO: End-to-end pipeline script?
 # TODO: Change expected types to Union
 
-def fit_background_fits(image: Union[str, fits.HDUList], model_type='polynomial', deg: int = 2):
+def fit_background_fits(image: Union[str, fits.HDUList], model_type='polynomial', local: bool = True,
+                        centre_x: int = None, centre_y: int = None, frame: int = 50,
+                        deg: int = 3):
     image, _ = ff.path_or_hdu(image)
     data = image[0].data
+
+    if local:
+        if centre_x is None:
+            centre_x = int(data.shape[1] / 2)
+        if centre_y is None:
+            centre_y = int(data.shape[0] / 2)
+        left = centre_x - frame
+        right = centre_x + frame
+        bottom = centre_y - frame
+        top = centre_y + frame
+        data = data[bottom:top, left:right]
     background = fit_background(data=data, model_type=model_type, deg=deg)
     background_image = deepcopy(image)
-    background_image[0].data = background
+    if local:
+        background_image[0].data = np.zeros(shape=image[0].data.shape)
+        background_image[0].data[bottom:top, left:right] = background
+    else:
+        background_image[0].data = background
     return background_image
 
 
