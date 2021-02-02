@@ -305,7 +305,6 @@ def new_filter_params(quiet: bool = False):
 
 
 def filter_params(f: str, instrument: str = 'FORS2', quiet: bool = False):
-    instrument = instrument.upper()
     return load_params(param_path + f'filters/{instrument}-{f}', quiet=quiet)
 
 
