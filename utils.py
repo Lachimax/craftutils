@@ -496,6 +496,20 @@ def select_option(message: str, options: List[str]):
     return picked
 
 
+def select_yn(message: str):
+    print(message)
+    accepted = ['y', 'n', 'yes', 'no']
+    inp = None
+    while inp is None:
+        inp = input().lower()
+        if inp not in accepted:
+            print("Input not recognised. Try again:")
+    if inp in ['y', 'yes']:
+        return True
+    else:
+        return False
+
+
 def user_input(message: str, typ: type = str):
     inp = None
     print(message)
