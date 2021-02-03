@@ -29,8 +29,20 @@ def check_trailing_slash(path: str):
     :return:
     """
 
-    if path[-1] != "/" or len(path) == 0:
+    if not path.endswith("/"):
         path += "/"
+    return path
+
+
+def remove_trailing_slash(path: str):
+    """
+    Adds a slash to the end of a string if it is missing.
+    :param path:
+    :return:
+    """
+
+    if path.endswith("/"):
+        path = path[:-1]
     return path
 
 
