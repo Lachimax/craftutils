@@ -126,6 +126,9 @@ def add_epoch_param(obj: str, params: dict, instrument: str = 'FORS2', quiet=Fal
 
 def add_output_path(obj: str, key: str, path: str, instrument='fors2', quiet: bool = False):
     instrument = instrument.lower()
+    key = u.remove_trailing_slash(key)
+    if not quiet:
+        print(f"Writing new path for {key}: {path}")
     p = object_params_instrument(obj=obj, instrument=instrument, quiet=quiet)
     add_params(file=p['data_dir'] + 'output_paths', params={key: path}, quiet=quiet)
 
