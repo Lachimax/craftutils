@@ -2,7 +2,7 @@
 
 import os
 import math
-from typing import Union
+from typing import Union, Tuple
 from copy import deepcopy
 
 import numpy as np
@@ -11,6 +11,9 @@ import photutils as ph
 from photutils import datasets
 import pylab as pl
 
+from matplotlib import pyplot as plt
+from datetime import datetime as dt
+
 from astropy import stats
 from astropy import wcs
 from astropy.modeling import models, fitting
@@ -18,9 +21,6 @@ from astropy.modeling.functional_models import Sersic1D
 import astropy.table as table
 from astropy.io import fits as fits
 from astropy import convolution
-
-from matplotlib import pyplot as plt
-from datetime import datetime as dt
 
 from craftutils import fits_files as ff
 import craftutils.params as p
@@ -31,7 +31,7 @@ from craftutils import plotting
 # TODO: End-to-end pipeline script?
 # TODO: Change expected types to Union
 
-def fit_background_fits(image: Union[str, fits.HDUList], model_type='polynomial', local: bool = True,
+def fit_background_fits(image: Union[str, fits.HDUList], model_type='polynomial', local: bool = True, global_sub=False,
                         centre_x: int = None, centre_y: int = None, frame: int = 50,
                         deg: int = 3):
     image, _ = ff.path_or_hdu(image)
@@ -42,24 +42,42 @@ def fit_background_fits(image: Union[str, fits.HDUList], model_type='polynomial'
             centre_x = int(data.shape[1] / 2)
         if centre_y is None:
             centre_y = int(data.shape[0] / 2)
-        left = centre_x - frame
-        right = centre_x + frame
-        bottom = centre_y - frame
-        top = centre_y + frame
-        data = data[bottom:top, left:right]
-    background = fit_background(data=data, model_type=model_type, deg=deg)
+        left = int(centre_x - frame)
+        right = int(centre_x + frame)
+        bottom = int(centre_y - frame)
+        top = int(centre_y + frame)
+        footprint = (bottom, top, left, right)
+    else:
+        footprint = None
+    background, background_large, model = fit_background(data=data, model_type=model_type, deg=deg, footprint=footprint)
     background_image = deepcopy(image)
     if local:
-        background_image[0].data = np.zeros(shape=image[0].data.shape)
-        background_image[0].data[bottom:top, left:right] = background
+        if global_sub:
+            background_image[0].data = background_large
+        else:
+            background_image[0].data = np.zeros(shape=image[0].data.shape)
+            background_image[0].data[bottom:top, left:right] = background
     else:
         background_image[0].data = background
     return background_image
 
 
-def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2):
+def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, footprint: Tuple[int] = None):
+    """
+
+    :param data:
+    :param model_type:
+    :param deg:
+    :param footprint: Piece of image to use in the fit. Should have format of (y_min, y_max, x_min, x_max). Blame numpy for the ordering.
+    :return:
+    """
+    if footprint is not None and len(footprint) != 4:
+        raise ValueError("Footprint should be a tuple of four integers.")
+    if footprint is None:
+        footprint = (0, data.shape[0], 0, data.shape[1])
     accepted_models = ['polynomial', 'gaussian']
-    y, x = np.mgrid[:data.shape[0], :data.shape[1]]
+    y, x = np.mgrid[footprint[0]:footprint[1], footprint[2]:footprint[3]]
+    y_large, x_large = np.mgrid[:data.shape[0], :data.shape[1]]
     if model_type.lower() == 'polynomial':
         init = models.Polynomial2D(degree=deg)
     elif model_type.lower() == 'gaussian':
@@ -67,8 +85,8 @@ def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2):
     else:
         raise ValueError("Unrecognised model; must be in", accepted_models)
     fitter = fitting.LevMarLSQFitter()
-    model = fitter(init, x, y, data)
-    return model(x, y)
+    model = fitter(init, x, y, data[footprint[0]:footprint[1], footprint[2]:footprint[3]])
+    return model(x, y), model(x_large, y_large), model
 
 
 def gain_median_combine(old_gain: float = 0.8, n_frames: int = 1):
