@@ -371,9 +371,10 @@ def subtract_file(file: Union[str, fits.HDUList], sub_file: Union[str, fits.HDUL
         subbed = hdu
     else:
         subbed = deepcopy(hdu)
-    print(f"Subtracting:")
-    print(f"\t {sub_path} from")
-    print(f"\t {path}")
+    if sub_path is not path is not None:
+        print(f"Subtracting:")
+        print(f"\t {sub_path} from")
+        print(f"\t {path}")
 
     subbed[0].data = subtract(hdu=hdu, subtract_hdu=sub_hdu)
 
