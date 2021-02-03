@@ -508,17 +508,24 @@ def select_option(message: str, options: List[str]):
     return picked
 
 
-def select_yn(message: str):
-    print(message)
-    accepted = ['y', 'n', 'yes', 'no']
+def select_yn(message: str, default='N/A'):
+    print(message, "(y/n)")
+    positive = ['y', 'yes', '1', 'true', 't']
+    negative = ['n', 'no', '0', 'false', 'f']
+    if default in positive:
+        positive.append("")
+    elif default in negative:
+        negative.append("")
     inp = None
     while inp is None:
         inp = input().lower()
-        if inp not in accepted:
+        if inp not in positive and inp not in negative:
             print("Input not recognised. Try again:")
-    if inp in ['y', 'yes']:
+    if inp in positive:
+        print("You have selected 'yes'.")
         return True
     else:
+        print("You have selected 'no'.")
         return False
 
 
