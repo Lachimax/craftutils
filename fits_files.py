@@ -348,14 +348,23 @@ def divide_by_exp_time(file: Union['fits.hdu.hdulist.HDUList', 'str'], output: '
     return file
 
 
-def subtract(hdu, subtract_hdu):
+def find_data(hdu: fits.HDUList):
+    for i, layer in enumerate(hdu):
+        if layer.data is not None:
+            return layer.data
+
+
+def subtract(hdu: fits.HDUList, subtract_hdu: fits.HDUList):
     """
 
     :return:
     """
 
-    data_prime = hdu[0].data
-    data_sub = subtract_hdu[0].data
+    if type(hdu) is not fits.HDUList or type(subtract_hdu) is not fits.HDUList:
+        raise TypeError("Both arguments must be fits.HDUList")
+
+    data_prime = find_data(hdu=hdu)
+    data_sub = find_data(hdu=subtract_hdu)
 
     if data_prime.shape != data_sub.shape:
         raise ValueError("The files are not the same shape.")
@@ -371,10 +380,9 @@ def subtract_file(file: Union[str, fits.HDUList], sub_file: Union[str, fits.HDUL
         subbed = hdu
     else:
         subbed = deepcopy(hdu)
-    if sub_path is not path is not None:
-        print(f"Subtracting:")
-        print(f"\t {sub_path} from")
-        print(f"\t {path}")
+    print(f"Subtracting:")
+    print(f"\t {sub_path} from")
+    print(f"\t {path}")
 
     subbed[0].data = subtract(hdu=hdu, subtract_hdu=sub_hdu)
 
