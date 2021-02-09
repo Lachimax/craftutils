@@ -1,6 +1,7 @@
 # Code by Lachlan Marnoch, 2019-2021
 
 import ruamel.yaml as yaml
+import csv
 import json
 from typing import Union
 import os
@@ -8,6 +9,24 @@ import numpy as np
 import astropy.table as tbl
 
 from craftutils import utils as u
+
+
+def tabulate_output_values(path: str, output: str = None):
+    path = u.check_trailing_slash(path=path)
+    outputs = []
+    for file in filter(lambda filename: 'output_values.yaml' in filename, os.listdir(path)):
+        output_values = load_params(file=path + file)
+        output_values["filename"] = file
+        outputs.append(output_values)
+
+    outputs = tbl.Table(outputs)
+
+    if output is not None:
+        output = u.sanitise_file_ext(filename=output, ext='.csv')
+        outputs.write(output)
+        outputs.sort(keys=outputs["filename"])
+
+    return outputs
 
 
 def check_for_config():
@@ -547,9 +566,10 @@ def refresh_params_folder(folder: str, template: str, quiet: bool = False):
                     new_file_params[param] = file_params[param]
                 elif param in template_params and param[:2] != 'f_':
                     new_file_params[param] = file_params[param]
-            save_params(param_path + folder + '/' + file, new_file_params, quiet=quiet)
-            p = yaml_to_json(param_path + folder + '/' + file, quiet=quiet)
-            save_params(param_path + folder + '/' + file, p, quiet=quiet)
+            # Write to .yaml file
+            save_params(path + '/' + file, new_file_params, quiet=quiet)
+            # Convert to json
+            p = yaml_to_json(path + '/' + file, quiet=quiet)
 
 
 def sanitise_wavelengths(quiet: bool = False):
