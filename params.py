@@ -24,7 +24,7 @@ def tabulate_output_values(path: str, output: str = None):
     if output is not None:
         output = u.sanitise_file_ext(filename=output, ext='.csv')
         outputs.write(output)
-        outputs.sort(keys=outputs["filename"])
+        outputs.sort(keys="filename")
 
     return outputs
 
