@@ -2,7 +2,7 @@
 
 import os
 import math
-from typing import Union, Tuple
+from typing import Union, Tuple, List
 from copy import deepcopy
 
 import numpy as np
@@ -46,7 +46,12 @@ def fit_background_fits(image: Union[str, fits.HDUList], model_type='polynomial'
         right = int(centre_x + frame)
         bottom = int(centre_y - frame)
         top = int(centre_y + frame)
-        footprint = (bottom, top, left, right)
+        footprint = [bottom, top, left, right]
+        for i, side in enumerate(footprint):
+            if side < 0:
+                footprint[i] = 0
+            elif side > data.shape[1]:
+                footprint[i] = data.shape[1]
     else:
         footprint = None
     background, background_large, model = fit_background(data=data, model_type=model_type, deg=deg, footprint=footprint)
@@ -56,13 +61,13 @@ def fit_background_fits(image: Union[str, fits.HDUList], model_type='polynomial'
             background_image[0].data = background_large
         else:
             background_image[0].data = np.zeros(shape=image[0].data.shape)
-            background_image[0].data[bottom:top, left:right] = background
+            background_image[0].data[footprint[0]:footprint[1], footprint[2]:footprint[3]] = background
     else:
         background_image[0].data = background
     return background_image
 
 
-def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, footprint: Tuple[int] = None):
+def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, footprint: List[int] = None):
     """
 
     :param data:
@@ -74,8 +79,13 @@ def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, foot
     if footprint is not None and len(footprint) != 4:
         raise ValueError("Footprint should be a tuple of four integers.")
     if footprint is None:
-        footprint = (0, data.shape[0], 0, data.shape[1])
+        footprint = [0, data.shape[0], 0, data.shape[1]]
     accepted_models = ['polynomial', 'gaussian']
+    for i, side in enumerate(footprint):
+        if side < 0:
+            footprint[i] = 0
+        elif side > data.shape[1]:
+            footprint[i] = data.shape[1]
     y, x = np.mgrid[footprint[0]:footprint[1], footprint[2]:footprint[3]]
     y_large, x_large = np.mgrid[:data.shape[0], :data.shape[1]]
     if model_type.lower() == 'polynomial':
@@ -85,6 +95,7 @@ def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, foot
     else:
         raise ValueError("Unrecognised model; must be in", accepted_models)
     fitter = fitting.LevMarLSQFitter()
+    print(footprint)
     model = fitter(init, x, y, data[footprint[0]:footprint[1], footprint[2]:footprint[3]])
     return model(x, y), model(x_large, y_large), model
 

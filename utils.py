@@ -4,7 +4,7 @@ from datetime import datetime as dt
 import numpy as np
 import math
 import os
-from typing import List
+from typing import List, Union
 
 from astropy.coordinates import SkyCoord
 import astropy.table as tbl
@@ -489,17 +489,28 @@ def unit_str_to_float(string: str):
     return value, units
 
 
-def select_option(message: str, options: List[str]):
+def select_option(message: str, options: List[str], default: Union[str, int] = None):
+    if type(default) is str:
+        default = options.index(default)
+    if default is not None:
+        message += f" [default: {default} {options[default]}]"
+    print()
     print(message)
+
     for i, opt in enumerate(options):
         print(i, opt)
     selection = None
     picked = None
+
     while selection is None or picked is None:
+        selection = input()
+        if selection == "" and default is not None:
+            selection = default
         try:
-            selection = int(input())
+            selection = int(selection)
         except ValueError:
             print("Invalid response. Please enter an integer.")
+            continue
         try:
             picked = options[selection]
         except IndexError:
@@ -508,14 +519,20 @@ def select_option(message: str, options: List[str]):
     return picked
 
 
-def select_yn(message: str, default='N/A'):
-    print(message, "(y/n)")
+def select_yn(message: str, default: Union[str, bool] = None):
+    message += " (y/n) "
     positive = ['y', 'yes', '1', 'true', 't']
     negative = ['n', 'no', '0', 'false', 'f']
-    if default in positive:
+    if default in positive or default is True:
         positive.append("")
-    elif default in negative:
+        message += f"[default: y]"
+    elif default in negative or default is False:
         negative.append("")
+        message += f"[default: n]"
+    elif default is not None:
+        print("Warning: default not recognised. No default value will be used.")
+    print()
+    print(message)
     inp = None
     while inp is None:
         inp = input().lower()
@@ -529,14 +546,27 @@ def select_yn(message: str, default='N/A'):
         return False
 
 
-def user_input(message: str, typ: type = str):
+def user_input(message: str, typ: type = str, default=None):
     inp = None
+    if default is not None:
+        if type(default) is not typ:
+            try:
+                default = typ(default)
+
+            except ValueError:
+                print(f"Default ({default}) could not be cast to {typ}. Proceeding without default value.")
+
+        message += f" [default: {default}]"
+
     print(message)
     while type(inp) is not typ:
         inp = input()
-        try:
-            inp = typ(inp)
-        except ValueError:
-            print(f"Could not cast {inp} to {typ}. Try again:")
+        if inp == "":
+            inp = default
+        if type(inp) is not typ:
+            try:
+                inp = typ(inp)
+            except ValueError:
+                print(f"Could not cast {inp} to {typ}. Try again:")
     print(f"You have entered {inp}.")
     return inp
