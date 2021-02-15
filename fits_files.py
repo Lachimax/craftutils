@@ -60,7 +60,7 @@ def path_or_hdu(hdu: Union[fits.HDUList, str], update=False):
     # TODO: Propagate this method to where it's needed.
     path = None
     if type(hdu) is str:
-        path = hdu
+        path = u.sanitise_file_ext(filename=hdu, ext=".fits")
         if update:
             hdu = fits.open(hdu, mode='update')
         else:
@@ -384,6 +384,8 @@ def subtract_file(file: Union[str, fits.HDUList], sub_file: Union[str, fits.HDUL
     print(f"\t {sub_path} from")
     print(f"\t {path}")
 
+    print(hdu)
+    print(sub_hdu)
     subbed[0].data = subtract(hdu=hdu, subtract_hdu=sub_hdu)
 
     add_log(file=subbed, action=f'Subtracted {sub_path} from {path}')
@@ -666,7 +668,7 @@ def world_to_pix(ra: "float", dec: "float", header: "fits.header.Header"):
 
 
 def trim(hdu: fits.hdu.hdulist.HDUList,
-         left: 'int' = None, right: 'int' = None, bottom: 'int' = None, top: 'int' = None,
+         left: int = None, right: int = None, bottom: int = None, top: int = None,
          update_wcs=True, in_place=False):
     """
 
@@ -772,8 +774,8 @@ def trim_ccddata(ccddata: CCDData,
     return ccddata
 
 
-def trim_file(path: 'str', left: 'int' = None, right: 'int' = None, bottom: 'int' = None, top: 'int' = None,
-              new_path: 'str' = None):
+def trim_file(path: Union[str, fits.HDUList], left: int = None, right: int = None, bottom: int = None, top: int = None,
+              new_path: str = None):
     """
     Trims the edges of a .fits file while retaining its WCS information.
     :param path:
@@ -784,11 +786,9 @@ def trim_file(path: 'str', left: 'int' = None, right: 'int' = None, bottom: 'int
     :return:
     """
 
-    path = u.sanitise_file_ext(filename=path, ext='.fits')
+    file, path = path_or_hdu(path)
     if new_path is not None:
         new_path = u.sanitise_file_ext(filename=new_path, ext='.fits')
-
-    file = fits.open(path)
 
     file = trim(hdu=file, left=left, right=right, bottom=bottom, top=top)
 
@@ -804,7 +804,12 @@ def trim_file(path: 'str', left: 'int' = None, right: 'int' = None, bottom: 'int
 
     print(new_path)
     file.writeto(new_path, overwrite=True)
-    file.close()
+
+    if path is not None:
+        file.close()
+        return new_path
+    else:
+        return file
 
 
 def correct_naxis(file: Union[fits.hdu.hdulist.HDUList, CCDData, str], x: int, y: int, write=False):
