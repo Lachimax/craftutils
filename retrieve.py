@@ -586,7 +586,7 @@ def submit_cutout_job_des(ra: float, dec: float):
     Submits a cutout job  and returns the complete server response, which includes the job ID.
     :param ra: The Right Ascension of the cutout centre, in degrees.
     :param dec: The Declination of the cutout centre, in degrees.
-    :return: 
+    :return:
     """
 
     positions = f'''
