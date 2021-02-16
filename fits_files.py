@@ -7,6 +7,7 @@ from copy import deepcopy
 from astropy import wcs
 from astropy.nddata import CCDData
 from astropy.io import fits
+from astropy import units
 
 from datetime import datetime as dt
 from typing import Union
@@ -18,9 +19,11 @@ import matplotlib.pyplot as plt
 from craftutils import utils as u
 from craftutils import plotting as pl
 
-
 # TODO: Fill in docstrings.
 # TODO: Sanitise pipeline inputs (ie check if object name is valid)
+
+pix = units.def_unit("pix")
+
 
 def get_rotation_angle(header: fits.header):
     """
@@ -597,18 +600,20 @@ def sort_by_filter(path: 'str'):
             sh.move(path + file, filter_path)
 
 
-def get_pixel_scale(file: Union['fits.hdu.hdulist.HDUList', 'str']):
+def get_pixel_scale(file: Union['fits.hdu.hdulist.HDUList', 'str'], layer: int = 0, astropy_units: bool = False):
     """
+    Using the FITS file header, obtains the pixel scale of the file (in degrees).
+    Declination scale is the true angular size of the pixel.
     Assumes that the change in spherical distortion in RA over the width of the image is negligible.
     :param file:
-    :return:
+    :return: Tuple containing the pixel scale of the FITS file: (ra scale, dec scale)
     """
     # TODO: Rewrite photometry functions to use this
 
     file, path = path_or_hdu(file)
 
-    header = file[0].header
-    image = file[0].data
+    header = file[layer].header
+    image = file[layer].data
 
     # To take (very roughly) into account the spherical distortion to the RA, we obtain an RA pixel scale by dividing
     # the difference in RA across the image by the number of pixels. It's good enough to give an average value, and the
@@ -627,6 +632,9 @@ def get_pixel_scale(file: Union['fits.hdu.hdulist.HDUList', 'str']):
     if path:
         file.close()
 
+    if astropy_units:
+        ra_pixel_scale *= units.deg / pix
+        dec_pixel_scale *= units.deg / pix
     return abs(ra_pixel_scale), abs(dec_pixel_scale)
 
 
