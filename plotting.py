@@ -568,8 +568,11 @@ def plot_gal_params(hdu: fits.HDUList, ras: Union[list, np.ndarray, float], decs
             else:
                 ellipse = photutils.EllipticalAperture((x, ys[i]), a=a[i], b=b[i], theta=theta[i])
             ellipse.plot(color=colour, label=label, ls=line_style)
+            line_label = None
+        else:
+            line_label = label
         if show_centre:
-            plt.plot((0.0, n_x), (ys[i], ys[i]), c=colour)
+            plt.plot((0.0, n_x), (ys[i], ys[i]), c=colour, label=line_label)
             plt.plot((x, x), (0.0, n_y), c=colour)
 
 
