@@ -8,11 +8,19 @@ from typing import List, Union
 
 from astropy.coordinates import SkyCoord
 import astropy.table as tbl
-import astropy.io.fits as fits
+from astropy.io import fits
+from astropy import units
 
 
 # TODO: Arrange these into some kind of logical order.
 # TODO: Also comment.
+
+def dequantify(number):
+    if type(number) is units.Quantity:
+        return number.value
+    else:
+        return number
+
 
 def sort_dict_by_value(dictionary: dict):
     sorted_keys = sorted(dictionary, key=dictionary.get)
