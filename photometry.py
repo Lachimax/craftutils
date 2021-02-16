@@ -21,6 +21,7 @@ from astropy.modeling.functional_models import Sersic1D
 import astropy.table as table
 from astropy.io import fits as fits
 from astropy import convolution
+from astropy import units
 
 from craftutils import fits_files as ff
 import craftutils.params as p
@@ -30,42 +31,6 @@ from craftutils import plotting
 
 # TODO: End-to-end pipeline script?
 # TODO: Change expected types to Union
-
-def fit_background_fits(image: Union[str, fits.HDUList], model_type='polynomial', local: bool = True, global_sub=False,
-                        centre_x: int = None, centre_y: int = None, frame: int = 50,
-                        deg: int = 3):
-    image, _ = ff.path_or_hdu(image)
-    data = image[0].data
-
-    if local:
-        if centre_x is None:
-            centre_x = int(data.shape[1] / 2)
-        if centre_y is None:
-            centre_y = int(data.shape[0] / 2)
-        left = int(centre_x - frame)
-        right = int(centre_x + frame)
-        bottom = int(centre_y - frame)
-        top = int(centre_y + frame)
-        footprint = [bottom, top, left, right]
-        for i, side in enumerate(footprint):
-            if side < 0:
-                footprint[i] = 0
-            elif side > data.shape[1]:
-                footprint[i] = data.shape[1]
-    else:
-        footprint = None
-    background, background_large, model = fit_background(data=data, model_type=model_type, deg=deg, footprint=footprint)
-    background_image = deepcopy(image)
-    if local:
-        if global_sub:
-            background_image[0].data = background_large
-        else:
-            background_image[0].data = np.zeros(shape=image[0].data.shape)
-            background_image[0].data[footprint[0]:footprint[1], footprint[2]:footprint[3]] = background
-    else:
-        background_image[0].data = background
-    return background_image
-
 
 def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, footprint: List[int] = None):
     """
@@ -98,6 +63,43 @@ def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, foot
     print(footprint)
     model = fitter(init, x, y, data[footprint[0]:footprint[1], footprint[2]:footprint[3]])
     return model(x, y), model(x_large, y_large), model
+
+
+def fit_background_fits(image: Union[str, fits.HDUList], model_type='polynomial', local: bool = True, global_sub=False,
+                        centre_x: int = None, centre_y: int = None,
+                        frame: int = 50,
+                        deg: int = 3):
+    image, _ = ff.path_or_hdu(image)
+    data = image[0].data
+
+    if local:
+        if centre_x is None:
+            centre_x = int(data.shape[1] / 2)
+        if centre_y is None:
+            centre_y = int(data.shape[0] / 2)
+        left = int(centre_x - frame)
+        right = int(centre_x + frame)
+        bottom = int(centre_y - frame)
+        top = int(centre_y + frame)
+        footprint = [bottom, top, left, right]
+        for i, side in enumerate(footprint):
+            if side < 0:
+                footprint[i] = 0
+            elif side > data.shape[1]:
+                footprint[i] = data.shape[1]
+    else:
+        footprint = None
+    background, background_large, model = fit_background(data=data, model_type=model_type, deg=deg, footprint=footprint)
+    background_image = deepcopy(image)
+    if local:
+        if global_sub:
+            background_image[0].data = background_large
+        else:
+            background_image[0].data = np.zeros(shape=image[0].data.shape)
+            background_image[0].data[footprint[0]:footprint[1], footprint[2]:footprint[3]] = background
+    else:
+        background_image[0].data = background
+    return background_image
 
 
 def gain_median_combine(old_gain: float = 0.8, n_frames: int = 1):
