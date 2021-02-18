@@ -22,6 +22,7 @@ import astropy.table as table
 from astropy.io import fits as fits
 from astropy import convolution
 from astropy import units
+from astropy.coordinates import SkyCoord
 
 from craftutils import fits_files as ff
 import craftutils.params as p
@@ -31,6 +32,49 @@ from craftutils import plotting
 
 # TODO: End-to-end pipeline script?
 # TODO: Change expected types to Union
+
+def get_median_background(image: Union[str, fits.HDUList], ra: float = None, dec: float = None, frame: int = 100,
+                          show: bool = False, output: str = None):
+    file, path = ff.path_or_hdu(image)
+    data = file[0].data
+    left = right = bottom = top = None
+    if ra is not None and dec is not None and frame is not None:
+        wcs_this = wcs.WCS(header=file[0].header)
+        if not SkyCoord(f"{ra}d {dec}d").contained_by(wcs_this):
+            raise ValueError("RA and DEC must be within image footprint")
+        x, y = wcs_this.all_world2pix(ra, dec, 0)
+        left = int(x - frame)
+        right = int(x + frame)
+        bottom = int(y - frame)
+        top = int(y + frame)
+
+    if left is None or left < 0:
+        left = 0
+    if right is None or right > data.shape[1]:
+        right = data.shape[1]
+    if bottom is None or bottom < 0:
+        bottom = 0
+    if top is None or top > data.shape[0]:
+        top = data.shape[0]
+
+    back_patch = data[bottom:top, left:right]
+    if path is not None:
+        file.close()
+    print(show)
+    plt.imshow(back_patch, origin='lower')
+    if output is not None:
+        plt.savefig(output + "patch.jpg")
+    if show:
+        plt.show()
+    plt.close()
+    plt.hist(back_patch.flatten())
+    if output is not None:
+        plt.savefig(output + "hist.jpg")
+    if show:
+        plt.show()
+    plt.close()
+    return np.nanmedian(back_patch)
+
 
 def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, footprint: List[int] = None):
     """
