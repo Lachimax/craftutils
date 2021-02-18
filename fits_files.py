@@ -19,13 +19,11 @@ import matplotlib.pyplot as plt
 from craftutils import utils as u
 from craftutils import plotting as pl
 
+
 # TODO: Fill in docstrings.
 # TODO: Sanitise pipeline inputs (ie check if object name is valid)
 
-pix = units.def_unit("pix")
-
-
-def get_rotation_angle(header: fits.header):
+def get_rotation_angle(header: fits.header, astropy_units = False):
     """
     Special thanks to https://math.stackexchange.com/questions/301319/derive-a-rotation-from-a-2d-rotation-matrix
     :param header:
@@ -37,6 +35,10 @@ def get_rotation_angle(header: fits.header):
         wcs_ob = wcs.WCS(header)
         matrix = wcs_ob.pixel_scale_matrix
         theta = np.arctan2(matrix[1, 1], matrix[1, 0]) * 180 / np.pi - 90
+
+    if astropy_units:
+        theta *= units.deg
+
     return theta
 
 
