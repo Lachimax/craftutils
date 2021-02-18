@@ -609,6 +609,7 @@ def get_pixel_scale(file: Union['fits.hdu.hdulist.HDUList', 'str'], layer: int =
     Assumes that the change in spherical distortion in RA over the width of the image is negligible.
     :param file:
     :return: Tuple containing the pixel scale of the FITS file: (ra scale, dec scale)
+        If astropy_units is True, returns it as an astropy pixel_scale equivalency.
     """
     # TODO: Rewrite photometry functions to use this
 
@@ -634,10 +635,14 @@ def get_pixel_scale(file: Union['fits.hdu.hdulist.HDUList', 'str'], layer: int =
     if path:
         file.close()
 
+    ra_pixel_scale = abs(ra_pixel_scale)
+    dec_pixel_scale = abs(dec_pixel_scale)
+
     if astropy_units:
-        ra_pixel_scale *= units.deg / pix
-        dec_pixel_scale *= units.deg / pix
-    return abs(ra_pixel_scale), abs(dec_pixel_scale)
+        ra_pixel_scale = units.pixel_scale(ra_pixel_scale * units.deg / units.pixel)
+        dec_pixel_scale = units.pixel_scale(dec_pixel_scale * units.deg / units.pixel)
+
+    return ra_pixel_scale, dec_pixel_scale
 
 
 def add_log(file: Union[fits.hdu.hdulist.HDUList, str], action: str):
