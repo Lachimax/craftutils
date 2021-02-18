@@ -614,7 +614,7 @@ def jy_to_mag(jy: 'float'):
 
 # TODO: Implement error properly here. Not needed right this minute because I'm currently relying on SExtractor.
 #  There are some multiplications in this function that might need erroring.
-def aperture_photometry(data: np.ndarray, x: float, y: float, fwhm: float = 2.,
+def aperture_photometry(data: np.ndarray, x: float = None, y: float = None, fwhm: float = 2.,
                         exp_time: float = 1., exp_time_err: float = 0.0,
                         zeropoint: float = 0.0, zeropoint_err: float = 0.0,
                         ext: float = 0.0, ext_err: float = 0.0,
@@ -625,13 +625,13 @@ def aperture_photometry(data: np.ndarray, x: float, y: float, fwhm: float = 2.,
                         r_ap: float = None,
                         r_ann_in: float = None,
                         r_ann_out: float = None,
-                        r_type='fwhm'):
+                        r_type='fwhm', sky: bool = False, wcs_obj: wcs.WCS = None):
     """
     Constructed using this tutorial: https://photutils.readthedocs.io/en/latest/aperture.html
     :param data:
     :param x:
     :param y:
-    :param fwhm: in pixels
+    :param fwhm: in arcsec
     :param exp_time:
     :param zeropoint:
     :param ext:
@@ -639,20 +639,21 @@ def aperture_photometry(data: np.ndarray, x: float, y: float, fwhm: float = 2.,
     :param colour_term:
     :param colour:
     :param plot:
-    :param r_ap: Aperture radius.
-    :param r_ann_in: Inner background-correction annulus radius.
-    :param r_ann_out: Outer background-correction annulus radius.
+    :param r_ap: Aperture radius, in arcsec.
+    :param r_ann_in: Inner background-correction annulus radius, in arcsec if or in multiples of fwhm.
+    :param r_ann_out: Outer background-correction annulus radius, in arcsec.
     :param r_type: Accepts 'fwhm' or 'abs' - if 'fwhm', it calculates the aperture size as a multiple of the image
     full-width half-maximum. If 'abs', it uses a simple pixel distance.
+    :param sky: if True, x and y should be sky coordinates; x=RA, y=DEC. Must provide wcs_obj if True.
+    :param wcs_obj: the WCS solution for the data. Only necessary if sky is True.
     :return:
     """
-
-    # TODO: throw error if r_type is not "abs" or "fwhm"
 
     # Set defaults for aperture and annulus size; if annulus sizes are not given, they default to a fixed value
     # above the aperture size. This is likely not advantageous, so do try to provide your own fixed values.
 
     if r_type == 'fwhm':
+
         if r_ap is None:
             r_ap = 5. * fwhm
         else:
@@ -676,8 +677,15 @@ def aperture_photometry(data: np.ndarray, x: float, y: float, fwhm: float = 2.,
         if r_ann_out is None:
             r_ann_out = r_ann_in + 10.
 
-    positions = np.array([x, y])
-    apertures = ph.CircularAperture(positions=positions, r=r_ap)
+    else:
+        raise ValueError("r_type not recognised")
+
+    positions = np.array([x, y]).transpose()
+    if sky:
+        coord = SkyCoord(ra=x, dec=y)
+        apertures = ph.SkyCircularAperture(positions=coord, r=r_ap)
+    else:
+        apertures = ph.CircularAperture(positions=positions, r=r_ap)
 
     # Calculate background median for each aperture using a concentric annulus.
     annuli = ph.CircularAnnulus(positions=positions, r_in=r_ann_in, r_out=r_ann_out)
@@ -693,7 +701,7 @@ def aperture_photometry(data: np.ndarray, x: float, y: float, fwhm: float = 2.,
     # Add a new column to cat with the median of each annulus (corresponding to the median background for each aperture)
     cat['annulus_median'] = bg_medians
     # 'subtract' is the total amount to subtract from the flux of each aperture, given the area.
-    cat['subtract'] = bg_medians * apertures.area()
+    cat['subtract'] = bg_medians * apertures.area
     # 'flux' is then the corrected flux of the aperture.
     cat['flux'] = cat['aperture_sum'] - cat['subtract']
     # 'mag' is the aperture magnitude.
