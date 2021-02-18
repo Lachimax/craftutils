@@ -359,7 +359,7 @@ def find_data(hdu: fits.HDUList):
             return layer.data
 
 
-def subtract(hdu: fits.HDUList, subtract_hdu: fits.HDUList):
+def subtract(hdu: fits.HDUList, subtract_hdu: fits.HDUList, offset: float = 0.0):
     """
 
     :return:
@@ -374,11 +374,11 @@ def subtract(hdu: fits.HDUList, subtract_hdu: fits.HDUList):
     if data_prime.shape != data_sub.shape:
         raise ValueError("The files are not the same shape.")
 
-    return data_prime - data_sub
+    return data_prime - data_sub + offset
 
 
 def subtract_file(file: Union[str, fits.HDUList], sub_file: Union[str, fits.HDUList], output: str = None,
-                  in_place=False):
+                  in_place: bool = False, offset: float = 0.0):
     hdu, path = path_or_hdu(hdu=file)
     sub_hdu, sub_path = path_or_hdu(hdu=sub_file)
     if in_place:
@@ -391,7 +391,7 @@ def subtract_file(file: Union[str, fits.HDUList], sub_file: Union[str, fits.HDUL
 
     print(hdu)
     print(sub_hdu)
-    subbed[0].data = subtract(hdu=hdu, subtract_hdu=sub_hdu)
+    subbed[0].data = subtract(hdu=hdu, subtract_hdu=sub_hdu, offset=offset)
 
     add_log(file=subbed, action=f'Subtracted {sub_path} from {path}')
 
