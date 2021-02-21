@@ -216,38 +216,36 @@ def magnitude_error(flux: 'float', flux_err: 'float' = 0.0,
     return np.array([mag, error_plus, error_minus])
 
 
-def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
-                                   cat_path: 'str',
-                                   image: 'str',
-                                   output_path: 'str',
-                                   cat_name: 'str' = 'Catalogue',
-                                   image_name: 'str' = 'FORS2',
-                                   show: 'bool' = False,
-                                   cat_ra_col: 'str' = 'RA',
-                                   cat_dec_col: 'str' = 'DEC',
-                                   cat_mag_col: 'str' = 'WAVG_MAG_PSF_',
-                                   sex_ra_col='ra',
-                                   sex_dec_col='dec',
-                                   sex_x_col: 'str' = 'x',
-                                   sex_y_col: 'str' = 'y',
-                                   pix_tol: 'float' = 10.,
-                                   mag_tol: 'float' = 0.1,
-                                   flux_column: 'str' = 'flux_aper',
-                                   mag_range_cat_upper: 'float' = 20.,
-                                   mag_range_cat_lower: 'float' = 30.,
-                                   mag_range_sex_upper: 'float' = 100,
-                                   mag_range_sex_lower=-100,
-                                   stars_only: 'bool' = True,
-                                   star_class_tol: 'float' = 0.95,
-                                   star_class_col: 'str' = 'class_star',
-                                   exp_time: 'float' = None,
-                                   y_lower: 'int' = 0,
-                                   y_upper: 'int' = 100000,
-                                   get_sextractor_names=False,
-                                   sextractor_names=None,
-                                   cat_type='csv',
-                                   cat_zeropoint=0.0,
-                                   cat_zeropoint_err=0.0):
+def determine_zeropoint_sextractor(sextractor_cat_path: str,
+                                   cat_path: str,
+                                   image: str,
+                                   output_path: str,
+                                   cat_name: str = 'Catalogue',
+                                   image_name: str = 'FORS2',
+                                   show: bool = False,
+                                   cat_ra_col: str = 'RA',
+                                   cat_dec_col: str = 'DEC',
+                                   cat_mag_col: str = 'WAVG_MAG_PSF_',
+                                   sex_ra_col='ALPHA_SKY',
+                                   sex_dec_col='DELTA_SKY',
+                                   sex_x_col: str = 'X_IMAGE',
+                                   sex_y_col: str = 'Y_IMAGE',
+                                   pix_tol: float = 10.,
+                                   mag_tol: float = 0.1,
+                                   flux_column: str = 'FLUX_AUTO',
+                                   mag_range_cat_upper: float = 20.,
+                                   mag_range_cat_lower: float = 30.,
+                                   mag_range_sex_upper: float = 100,
+                                   mag_range_sex_lower: float = -100,
+                                   stars_only: bool = True,
+                                   star_class_tol: float = 0.95,
+                                   star_class_col: str = 'class_star',
+                                   exp_time: float = None,
+                                   y_lower: int = 0,
+                                   y_upper: int = 100000,
+                                   cat_type: str = 'csv',
+                                   cat_zeropoint: float = 0.0,
+                                   cat_zeropoint_err: float = 0.0):
     """
     This function expects your sextractor columns to be in the same format as found in params.sextractor_columns and
     default.param under sextractor.
@@ -279,8 +277,6 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
     :param exp_time:
     :param y_lower:
     :param y_upper:
-    :param get_sextractor_names:
-    :param sextractor_names:
     :param cat_type:
     :return:
     """
@@ -298,11 +294,6 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
     if exp_time is None:
         exp_time = ff.get_exp_time(image)
 
-    if get_sextractor_names:
-        sextractor_names = u.get_column_names_sextractor(sextractor_cat_path)
-    elif sextractor_names is None:
-        sextractor_names = p.load_params('param/sextractor_names')
-
     # Extract pixel scales from images.
     _, pix_scale = ff.get_pixel_scale(image)
     print('PIXEL SCALE:', pix_scale)
@@ -312,15 +303,11 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
 
     # Import the catalogue of the sky region.
     if cat_type != 'sextractor':
-        cat = table.Table()
-        cat = cat.read(cat_path, format='ascii.csv')
+        cat = table.Table.read(cat_path, format='ascii.csv')
         cat = cat.filled(fill_value=-999.)
 
     else:
-        sextractor_names_mod = sextractor_names.copy()
-        sextractor_names_mod[sextractor_names.index('ra')] = 'ra_cat'
-        sextractor_names_mod[sextractor_names.index('dec')] = 'dec_cat'
-        cat = table.Table(np.genfromtxt(cat_path, names=sextractor_names_mod))
+        cat = table.Table.read(cat_path, format="ascii.sextractor")
 
     if len(cat) == 0:
         raise ValueError("The reference catalogue is empty.")
@@ -353,7 +340,7 @@ def determine_zeropoint_sextractor(sextractor_cat_path: 'str',
     if stars_only:
         params['star_class_tol'] = float(star_class_tol)
 
-    source_tbl = table.Table(np.genfromtxt(sextractor_cat_path, names=sextractor_names))
+    source_tbl = table.Table.read(sextractor_cat_path, format="ascii.sextractor")
 
     source_tbl['mag'], _, _ = magnitude_complete(flux=source_tbl[flux_column], exp_time=exp_time)
 
