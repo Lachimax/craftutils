@@ -6,6 +6,8 @@ import json
 from typing import Union
 import os
 import numpy as np
+from datetime import date
+
 import astropy.table as tbl
 
 from craftutils import utils as u
@@ -79,6 +81,10 @@ def yaml_to_json(yaml_file: str, output: str = None, quiet: bool = False):
 
     if not quiet:
         print('Saving parameter file to ' + output)
+
+    for param in p:
+        if type(p[param]) is date:
+            p[param] = str(p[param])
 
     with open(output, 'w') as fj:
         json.dump(p, fj)
@@ -198,7 +204,7 @@ def plotting_params(quiet: bool = False):
     return load_params(param_path + 'plotting', quiet=quiet)
 
 
-def ingest_filter_properties(path: str, instrument: str, quiet: bool = False):
+def ingest_filter_properties(path: str, instrument: str, update: bool = False, quiet: bool = False):
     """
     Imports a dataset from http://archive.eso.org/bin/qc1_cgi?action=qc1_browse_table&table=fors2_photometry into a
     filter properties .yaml file within this project.
@@ -227,7 +233,8 @@ def ingest_filter_properties(path: str, instrument: str, quiet: bool = False):
     params['colour_term_err'] = u.numpy_to_list(data['colour_term_err'])
     params['extinction'] = u.numpy_to_list(data['extinction'])
     params['extinction_err'] = u.numpy_to_list(data['extinction_err'])
-
+    if update:
+        params['calib_last_updated'] = str(date.today())
     save_params(file=param_path + f'filters/{instrument}-{name}', dictionary=params)
 
 
@@ -569,7 +576,7 @@ def refresh_params_folder(folder: str, template: str, quiet: bool = False):
             # Write to .yaml file
             save_params(path + '/' + file, new_file_params, quiet=quiet)
             # Convert to json
-            p = yaml_to_json(path + '/' + file, quiet=quiet)
+            yaml_to_json(path + '/' + file, quiet=quiet)
 
 
 def sanitise_wavelengths(quiet: bool = False):
