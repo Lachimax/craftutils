@@ -23,7 +23,7 @@ from craftutils import plotting as pl
 # TODO: Fill in docstrings.
 # TODO: Sanitise pipeline inputs (ie check if object name is valid)
 
-def get_rotation_angle(header: fits.header, astropy_units = False):
+def get_rotation_angle(header: fits.header, astropy_units=False):
     """
     Special thanks to https://math.stackexchange.com/questions/301319/derive-a-rotation-from-a-2d-rotation-matrix
     :param header:
@@ -683,8 +683,9 @@ def world_to_pix(ra: "float", dec: "float", header: "fits.header.Header"):
 
 
 def trim(hdu: fits.hdu.hdulist.HDUList,
-         left: int = None, right: int = None, bottom: int = None, top: int = None,
-         update_wcs=True, in_place=False):
+         left: Union[int, units.Quantity] = None, right: Union[int, units.Quantity] = None,
+         bottom: Union[int, units.Quantity] = None, top: Union[int, units.Quantity] = None,
+         update_wcs: bool =True, in_place: bool =False):
     """
 
     :param hdu:
@@ -698,12 +699,23 @@ def trim(hdu: fits.hdu.hdulist.HDUList,
     shape = hdu[0].data.shape
     if left is None:
         left = 0
+    else:
+        left = int(u.dequantify(left))
+
     if right is None:
         right = shape[1]
+    else:
+        right = int(u.dequantify(right))
+
     if bottom is None:
         bottom = 0
+    else:
+        bottom = int(u.dequantify(bottom))
+
     if top is None:
         top = shape[0]
+    else:
+        top = int(u.dequantify(top))
 
     if right < left:
         raise ValueError('Improper inputs; right is smaller than left.')
@@ -719,6 +731,7 @@ def trim(hdu: fits.hdu.hdulist.HDUList,
         new_hdu[0].header['CRPIX1'] = hdu[0].header['CRPIX1'] - left
         new_hdu[0].header['CRPIX2'] = hdu[0].header['CRPIX2'] - bottom
 
+    print(bottom, top, left, right)
     new_hdu[0].data = hdu[0].data[bottom:top, left:right]
 
     return new_hdu
