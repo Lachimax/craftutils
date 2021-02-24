@@ -576,7 +576,10 @@ def plot_gal_params(hdu: fits.HDUList, ras: Union[list, np.ndarray, float], decs
             plt.plot((x, x), (0.0, n_y), c=colour)
 
 
-def plot_all_params(image: Union[str, fits.hdu.HDUList], cat: Union[str, Table, np.ndarray], show=True, cutout=False):
+def plot_all_params(image: Union[str, fits.hdu.HDUList], cat: Union[str, Table, np.ndarray], show: bool = True,
+                    cutout: bool = False, ra_key: str = "ALPHA_SKY", dec_key: str = "DELTA_SKY", a_key: str = "A_WORLD",
+                    b_key: str = "B_WORLD", theta_key: str = "THETA_WORLD", kron: bool = False,
+                    kron_key: str = "KRON_RADIUS"):
     """
     Plots
     :param image:
@@ -597,9 +600,13 @@ def plot_all_params(image: Union[str, fits.hdu.HDUList], cat: Union[str, Table, 
     plt.subplot(projection=wcs_image)
     norm = ImageNormalize(data, interval=ZScaleInterval(), stretch=SqrtStretch())
     plt.imshow(data, origin='lower', norm=norm, )
-    plot_gal_params(hdu=image, ras=cat['ra'], decs=cat['dec'], a=cat['a'],
-                    b=cat['b'],
-                    theta=cat['theta'], colour='red')
+    plot_gal_params(hdu=image, ras=cat[ra_key], decs=cat[dec_key], a=cat[a_key],
+                    b=cat[b_key],
+                    theta=cat[theta_key], colour='red')
+    if kron:
+        plot_gal_params(hdu=image, ras=cat[ra_key], decs=cat[dec_key], a=cat[kron_key] * cat[a_key],
+                        b=cat[kron_key] * cat[b_key],
+                        theta=cat[theta_key], colour='violet')
 
     if show:
         plt.show()
@@ -618,9 +625,14 @@ def plot_all_params(image: Union[str, fits.hdu.HDUList], cat: Union[str, Table, 
 
         gal = ff.trim(hdu=image, left=left, right=right, bottom=bottom, top=top)
         plt.imshow(gal[0].data)
-        plot_gal_params(hdu=gal, ras=cat['ra'], decs=cat['dec'], a=cat['a'],
-                        b=cat['b'],
-                        theta=cat['theta'], colour='red')
+        plot_gal_params(hdu=gal, ras=cat[ra_key], decs=cat[dec_key], a=cat[a_key],
+                        b=cat[b_key],
+                        theta=cat[theta_key], colour='red')
+        if kron:
+            plot_gal_params(hdu=image, ras=cat[ra_key], decs=cat[dec_key], a=cat[kron_key] * cat[a_key],
+                            b=cat[kron_key] * cat[b_key],
+                            theta=cat[theta_key], colour='violet')
+
         if show:
             plt.show()
 
