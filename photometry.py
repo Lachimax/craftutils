@@ -76,7 +76,8 @@ def get_median_background(image: Union[str, fits.HDUList], ra: float = None, dec
     return np.nanmedian(back_patch)
 
 
-def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, footprint: List[int] = None):
+def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, footprint: List[int] = None,
+                   weights: np.ndarray = None):
     """
 
     :param data:
@@ -105,14 +106,17 @@ def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, foot
         raise ValueError("Unrecognised model; must be in", accepted_models)
     fitter = fitting.LevMarLSQFitter()
     print(footprint)
-    model = fitter(init, x, y, data[footprint[0]:footprint[1], footprint[2]:footprint[3]])
+    if weights is not None:
+        weights = weights[footprint[0]:footprint[1], footprint[2]:footprint[3]]
+    model = fitter(init, x, y, data[footprint[0]:footprint[1], footprint[2]:footprint[3]],
+                   weights=weights)
     return model(x, y), model(x_large, y_large), model
 
 
 def fit_background_fits(image: Union[str, fits.HDUList], model_type='polynomial', local: bool = True, global_sub=False,
                         centre_x: int = None, centre_y: int = None,
                         frame: int = 50,
-                        deg: int = 3):
+                        deg: int = 3, weights: np.ndarray = None):
     image, _ = ff.path_or_hdu(image)
     data = image[0].data
 
@@ -133,7 +137,8 @@ def fit_background_fits(image: Union[str, fits.HDUList], model_type='polynomial'
                 footprint[i] = data.shape[1]
     else:
         footprint = None
-    background, background_large, model = fit_background(data=data, model_type=model_type, deg=deg, footprint=footprint)
+    background, background_large, model = fit_background(data=data, model_type=model_type, deg=deg, footprint=footprint,
+                                                         weights=weights)
     background_image = deepcopy(image)
     if local:
         if global_sub:
