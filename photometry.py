@@ -1305,7 +1305,7 @@ def insert_point_sources_to_file(file: Union[fits.hdu.HDUList, str],
     """
 
     :param file:
-    :param x:
+    :param x: x position, in pixels or RA degrees
     :param y:
     :param mag:
     :param fwhm:
@@ -1500,10 +1500,11 @@ def insert_synthetic(obj: Union[dict, str], x, y, test_path, filters: list, magn
 
 
 def select_zeropoint(obj: str, filt: str, instrument: str, outputs: dict = None):
-    if instrument == 'FORS2' or instrument == 'XSHOOTER':
+    instrument = instrument.lower()
+    if instrument == 'fors2' or instrument == 'xshooter':
         f_0 = filt[0]
         f_output = f_0
-    elif instrument == 'IMACS':
+    elif instrument == 'imacs':
         f_0 = filt[-1]
         f_output = filt
     else:
