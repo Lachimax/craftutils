@@ -1289,8 +1289,10 @@ def psfex(model: str, x, y):
     return psf
 
 
-def insert_point_sources_to_file(file: Union[fits.hdu.HDUList, str], x: np.float, y: np.float, mag: np.float,
-                                 fwhm: float,
+def insert_point_sources_to_file(file: Union[fits.hdu.HDUList, str],
+                                 x: np.float, y: np.float,
+                                 mag: np.float,
+                                 fwhm: float = None,
                                  output: str = None, overwrite: bool = True,
                                  zeropoint: float = 0.0,
                                  extinction: float = 0.0,
@@ -1351,12 +1353,15 @@ def insert_point_sources_to_file(file: Union[fits.hdu.HDUList, str], x: np.float
                                                                      airmass=airmass,
                                                                      saturate=saturate, model=psf_model)
 
-    else:
+    elif fwhm is not None:
         file[0].data, sources = insert_synthetic_point_sources_gauss(image=file[0].data, x=x, y=y, fwhm=fwhm, mag=mag,
                                                                      exp_time=exp_time,
                                                                      zeropoint=zeropoint, extinction=extinction,
                                                                      airmass=airmass,
                                                                      saturate=saturate)
+
+    else:
+        raise ValueError("Either fwhm or psf_model must be given")
 
     if extra_values is not None:
         sources = table.hstack([sources, extra_values], join_type='exact')
