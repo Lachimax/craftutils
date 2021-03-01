@@ -685,7 +685,7 @@ def world_to_pix(ra: "float", dec: "float", header: "fits.header.Header"):
 def trim(hdu: fits.hdu.hdulist.HDUList,
          left: Union[int, units.Quantity] = None, right: Union[int, units.Quantity] = None,
          bottom: Union[int, units.Quantity] = None, top: Union[int, units.Quantity] = None,
-         update_wcs: bool =True, in_place: bool =False):
+         update_wcs: bool = True, in_place: bool = False):
     """
 
     :param hdu:
@@ -750,17 +750,16 @@ def trim_frame_point(hdu: fits.hdu.hdulist.HDUList, ra: float, dec: float,
     """
     wcs_image = wcs.WCS(header=hdu[0].header)
     x, y = wcs_image.all_world2pix(ra, dec, 0)
-    _, scale = get_pixel_scale(hdu)
 
     if world_frame:
+        _, scale = get_pixel_scale(hdu)
         frame = frame / scale
 
-    left = int(x - frame)
-    right = int(x + frame)
-    top = int(y + frame)
-    bottom = int(y - frame)
+    left = max(int(x - frame), 0)
+    right = min(int(x + frame), hdu[0].data.shape[1])
+    bottom = max(int(y - frame), 0)
+    top = min(int(y + frame), hdu[0].data.shape[0])
 
-    print(hdu[0].data.shape)
     hdu_cut = trim(hdu=hdu, left=left, right=right, bottom=bottom, top=top)
     return hdu_cut
 
