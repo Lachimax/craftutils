@@ -1182,6 +1182,8 @@ def insert_synthetic_point_sources_gauss(image: np.ndarray, x: np.float, y: np.f
     print('Generating additive image...')
     add = datasets.make_model_sources_image(shape=image.shape, model=gaussian_model, source_table=sources)
 
+    #plt.imshow(add)
+
     combine = image + add
 
     if saturate is not None:
@@ -1308,7 +1310,7 @@ def insert_point_sources_to_file(file: Union[fits.hdu.HDUList, str],
     :param x: x position, in pixels or RA degrees
     :param y:
     :param mag:
-    :param fwhm:
+    :param fwhm: In pixels.
     :param output:
     :param overwrite:
     :param zeropoint:
@@ -1354,7 +1356,8 @@ def insert_point_sources_to_file(file: Union[fits.hdu.HDUList, str],
                                                                      saturate=saturate, model=psf_model)
 
     elif fwhm is not None:
-        file[0].data, sources = insert_synthetic_point_sources_gauss(image=file[0].data, x=x, y=y, fwhm=fwhm, mag=mag,
+        file[0].data, sources = insert_synthetic_point_sources_gauss(image=file[0].data, x=x, y=y,
+                                                                     fwhm=fwhm, mag=mag,
                                                                      exp_time=exp_time,
                                                                      zeropoint=zeropoint, extinction=extinction,
                                                                      airmass=airmass,
