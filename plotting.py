@@ -199,6 +199,7 @@ def plot_subimage(fig: plt.figure, hdu: Union[str, fits.HDUList], ra: float, dec
     """
     print(hdu)
     hdu, path = ff.path_or_hdu(hdu=hdu)
+    print(hdu[0].data.shape)
 
     hdu_cut = ff.trim_frame_point(hdu=hdu, ra=ra, dec=dec, frame=frame, world_frame=world_frame)
     wcs_cut = wcs.WCS(header=hdu_cut[0].header)
@@ -426,7 +427,7 @@ def plot_hg(data_title: str, instrument: str, f: str, frame: int,
         # plt.scatter(burst_x, burst_y)
     if show_hg:
         wcs_cut = wcs.WCS(header=hdu_cut[0].header)
-        hg_x, hg_y = wcs_cut.all_world2pix(hg_ra, hg_dec, 0)
+        hg_x, hg_y = wcs_cut.all_world2pix(hg_ra, hg_dec, 1)
         plt.scatter(hg_x, hg_y, marker='x', c='r')
 
     return fig, hdu_cut
@@ -550,7 +551,7 @@ def plot_gal_params(hdu: fits.HDUList, ras: Union[list, np.ndarray, float], decs
     header = hdu[0].header
     wcs_image = wcs.WCS(header=header)
     if world:
-        xs, ys = wcs_image.all_world2pix(ras, decs, 0)
+        xs, ys = wcs_image.all_world2pix(ras, decs, 1)
     else:
         xs = np.array(ras)
         ys = np.array(decs)
