@@ -11,6 +11,7 @@ from astropy import units
 
 from datetime import datetime as dt
 from typing import Union
+from numbers import Number
 import string
 import pandas as pd
 import numpy as np
@@ -737,6 +738,23 @@ def trim(hdu: fits.hdu.hdulist.HDUList,
     return new_hdu
 
 
+def subimage_edges(data: np.ndarray, x, y, frame):
+    bottom = y - frame
+    top = y + frame
+    left = x - frame
+    right = x + frame
+    bottom, top, left, right = check_subimage_edges(data=data, bottom=bottom, top=top, left=left, right=right)
+    return bottom, top, left, right
+
+
+def check_subimage_edges(data: np.ndarray, bottom, top, left, right):
+    bottom = max(int(bottom), 0)
+    top = min(int(top), data.shape[0])
+    left = max(int(left), 0)
+    right = min(int(right), data.shape[1])
+    return bottom, top, left, right
+
+
 def trim_frame_point(hdu: fits.hdu.hdulist.HDUList, ra: float, dec: float,
                      frame: Union[int, float], world_frame: bool = False):
     """
@@ -755,10 +773,7 @@ def trim_frame_point(hdu: fits.hdu.hdulist.HDUList, ra: float, dec: float,
         _, scale = get_pixel_scale(hdu)
         frame = frame / scale
 
-    left = max(int(x - frame), 0)
-    right = min(int(x + frame), hdu[0].data.shape[1])
-    bottom = max(int(y - frame), 0)
-    top = min(int(y + frame), hdu[0].data.shape[0])
+    bottom, top, left, right = subimage_edges(data=hdu[0].data, x=x, y=y, frame=frame)
 
     hdu_cut = trim(hdu=hdu, left=left, right=right, bottom=bottom, top=top)
     return hdu_cut
