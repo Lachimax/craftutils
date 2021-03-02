@@ -90,6 +90,12 @@ def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, foot
         raise ValueError("Footprint should be a tuple of four integers.")
     if footprint is None:
         footprint = [0, data.shape[0], 0, data.shape[1]]
+    else:
+        footprint[0], footprint[1], footprint[2], footprint[3] = ff.check_subimage_edges(data=data,
+                                                                                         bottom=footprint[0],
+                                                                                         top=footprint[1],
+                                                                                         left=footprint[2],
+                                                                                         right=footprint[3])
     accepted_models = ['polynomial', 'gaussian']
     for i, side in enumerate(footprint):
         if side < 0:
@@ -108,6 +114,9 @@ def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, foot
     print(footprint)
     if weights is not None:
         weights = weights[footprint[0]:footprint[1], footprint[2]:footprint[3]]
+    print(data[footprint[0]:footprint[1], footprint[2]:footprint[3]].shape)
+    print(x.shape)
+    print(y.shape)
     model = fitter(init, x, y, data[footprint[0]:footprint[1], footprint[2]:footprint[3]],
                    weights=weights)
     return model(x, y), model(x_large, y_large), model
@@ -125,16 +134,8 @@ def fit_background_fits(image: Union[str, fits.HDUList], model_type='polynomial'
             centre_x = int(data.shape[1] / 2)
         if centre_y is None:
             centre_y = int(data.shape[0] / 2)
-        left = int(centre_x - frame)
-        right = int(centre_x + frame)
-        bottom = int(centre_y - frame)
-        top = int(centre_y + frame)
+        bottom, top, left, right = ff.subimage_edges(data=data, x=centre_x, y=centre_y, frame=frame)
         footprint = [bottom, top, left, right]
-        for i, side in enumerate(footprint):
-            if side < 0:
-                footprint[i] = 0
-            elif side > data.shape[1]:
-                footprint[i] = data.shape[1]
     else:
         footprint = None
     background, background_large, model = fit_background(data=data, model_type=model_type, deg=deg, footprint=footprint,
@@ -602,6 +603,31 @@ def jy_to_mag(jy: 'float'):
     """
 
     return -2.5 * np.log10(jy)
+
+
+def single_aperture_photometry(data: np.ndarray, aperture: ph.Aperture, annulus: ph.Aperture, exp_time: float = 1.0,
+                               zeropoint: float = 0.0, extinction: float = 0.0, airmass: float = 0.0):
+    # Use background annulus to obtain a median sky background
+    mask = annulus.to_mask()
+    annulus_data = mask.multiply(data)[mask.data > 0]
+    _, median, _ = stats.sigma_clipped_stats(annulus_data)
+    print('BACKGROUND MEDIAN:', median)
+    # Get the photometry of the aperture
+    cat_photutils = ph.aperture_photometry(data=data, apertures=aperture)
+    # Multiply the median by the aperture area, so that we subtract the right amount for the aperture:
+    subtract_flux = median * aperture.area
+    # Correct:
+    flux_photutils = cat_photutils['aperture_sum'] - subtract_flux
+    # Convert to magnitude, with uncertainty propagation:
+    mag_photutils, _, _ = magnitude_complete(flux=flux_photutils,
+                                             # flux_err=cat_photutils['aperture_sum_err'],
+                                             exp_time=exp_time,  # exp_time_err=exp_time_err,
+                                             zeropoint=zeropoint,  # zeropoint_err=zeropoint_err,
+                                             ext=extinction,  # ext_err=extinction_err,
+                                             airmass=airmass,  # airmass_err=airmass_err
+                                             )
+
+    return mag_photutils, flux_photutils, subtract_flux, median
 
 
 # TODO: Implement error properly here. Not needed right this minute because I'm currently relying on SExtractor.
@@ -1182,7 +1208,7 @@ def insert_synthetic_point_sources_gauss(image: np.ndarray, x: np.float, y: np.f
     print('Generating additive image...')
     add = datasets.make_model_sources_image(shape=image.shape, model=gaussian_model, source_table=sources)
 
-    #plt.imshow(add)
+    # plt.imshow(add)
 
     combine = image + add
 
