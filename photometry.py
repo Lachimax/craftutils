@@ -37,27 +37,16 @@ def get_median_background(image: Union[str, fits.HDUList], ra: float = None, dec
                           show: bool = False, output: str = None):
     file, path = ff.path_or_hdu(image)
     data = file[0].data
-    left = right = bottom = top = None
     if ra is not None and dec is not None and frame is not None:
         wcs_this = wcs.WCS(header=file[0].header)
         if not SkyCoord(f"{ra}d {dec}d").contained_by(wcs_this):
             raise ValueError("RA and DEC must be within image footprint")
         x, y = wcs_this.all_world2pix(ra, dec, 0)
-        left = int(x - frame)
-        right = int(x + frame)
-        bottom = int(y - frame)
-        top = int(y + frame)
+        bottom, top, left, right = ff.subimage_edges(data=data, x=x, y=y, frame=frame)
+        back_patch = data[bottom:top, left:right]
+    else:
+        back_patch = data
 
-    if left is None or left < 0:
-        left = 0
-    if right is None or right > data.shape[1]:
-        right = data.shape[1]
-    if bottom is None or bottom < 0:
-        bottom = 0
-    if top is None or top > data.shape[0]:
-        top = data.shape[0]
-
-    back_patch = data[bottom:top, left:right]
     if path is not None:
         file.close()
     print(show)
