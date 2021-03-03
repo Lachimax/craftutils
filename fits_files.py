@@ -320,9 +320,7 @@ def divide_by_exp_time(file: Union['fits.hdu.hdulist.HDUList', 'str'], output: '
     :return:
     """
     path = False
-    if type(file) is str:
-        path = True
-        file = fits.open(file, mode='update')
+    file, path = path_or_hdu(file)
 
     old_exp_time = get_exp_time(file)
 
@@ -348,7 +346,7 @@ def divide_by_exp_time(file: Union['fits.hdu.hdulist.HDUList', 'str'], output: '
     if output is not None:
         file.writeto(output, overwrite=True)
 
-    if path:
+    if path is not None:
         file.close()
 
     return file
