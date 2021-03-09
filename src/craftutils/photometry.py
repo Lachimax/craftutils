@@ -1232,9 +1232,9 @@ def insert_synthetic_point_sources_psfex(image: np.ndarray, x: np.float, y: np.f
     if type(mag) is not np.ndarray:
         mag = np.array(mag)
     if type(x) is not np.ndarray:
-        x = np.array([x])
+        x = np.array(x)
     if type(y) is not np.ndarray:
-        y = np.array([y])
+        y = np.array(y)
 
     model, path = ff.path_or_hdu(model)
     psf_fwhm = model[1].header['PSF_FWHM']
@@ -1242,30 +1242,28 @@ def insert_synthetic_point_sources_psfex(image: np.ndarray, x: np.float, y: np.f
 
     gaussian_model = ph.psf.IntegratedGaussianPRF(sigma=u.fwhm_to_std(fwhm=gauss_fwhm))
 
-    sources = table.Table()
     combine = np.zeros(image.shape)
     print('Generating additive image...')
+    rows = []
     for i in range(len(x)):
-        source = table.Table()
+        flux = mag_to_flux(mag=mag[i], exp_time=exp_time, zeropoint=zeropoint, extinction=extinction,
+                           airmass=airmass)
 
-        source['x_0'] = x
-        source['y_0'] = y
-        source['flux'] = mag_to_flux(mag=mag, exp_time=exp_time, zeropoint=zeropoint, extinction=extinction,
-                                     airmass=airmass)
-
+        row = (x[i], y[i], flux)
+        source = table.Table(rows=[row], names=('x_0', 'y_0', 'flux'))
         print('Convolving...')
         add = datasets.make_model_sources_image(shape=image.shape, model=gaussian_model, source_table=source)
         kernel = convolution.CustomKernel(psfex(model=model, x=source['x_0'], y=source['y_0']))
         add = convolution.convolve(add, kernel)
 
-        combine = combine + add
+        combine += add
 
         if i == 0:
             sources = source
         else:
             sources = table.vstack([sources, source])
 
-    combine = image + combine
+    combine += image
 
     if saturate is not None:
         print('Saturating...')
@@ -1276,6 +1274,14 @@ def insert_synthetic_point_sources_psfex(image: np.ndarray, x: np.float, y: np.f
 
 
 def psfex(model: str, x, y):
+    """
+    Since PSFEx generates a model that is dependent on image position, this is used to collapse that into a useable kernel
+    for convolution purposes.
+    :param model:
+    :param x:
+    :param y:
+    :return:
+    """
     model, path = ff.path_or_hdu(model)
 
     header = model[1].header
@@ -1284,8 +1290,6 @@ def psfex(model: str, x, y):
 
     x = (x - header['POLZERO1']) / header['POLSCAL1']
     y = (y - header['POLZERO2']) / header['POLSCAL2']
-
-    print(len(a))
 
     if len(a) == 3:
         psf = a[0] + a[1] * x + a[2] * y
@@ -1358,8 +1362,8 @@ def insert_point_sources_to_file(file: Union[fits.hdu.HDUList, str],
         ra = x
         dec = y
         x, y = wcs_info.all_world2pix(x, y, 0)
-        x = np.array([x])
-        y = np.array([y])
+        x = np.array(x)
+        y = np.array(y)
     else:
         ra, dec = wcs_info.all_pix2world(x, y, 0)
 
