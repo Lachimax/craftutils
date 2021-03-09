@@ -2,6 +2,8 @@ import setuptools
 from shutil import copy
 from os import getcwd
 
+packages = setuptools.find_packages()
+
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
@@ -12,6 +14,7 @@ setuptools.setup(
     short_description=long_description,
     long_description=long_description,
     url="https://github.com/Lachimax/craftutils",
-    packages=setuptools.find_packages(),
+    packages=packages,
+    package_dir={'': 'src'},
     python_requires='>=3.6'
 )

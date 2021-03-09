@@ -3,6 +3,7 @@ import numpy.random as rand
 
 import craftutils.utils as u
 
+
 def value_from_pdf(values, probabilities):
     """
     Produces a pseudorandom number given a custom probability distribution.
