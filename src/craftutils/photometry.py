@@ -49,7 +49,6 @@ def get_median_background(image: Union[str, fits.HDUList], ra: float = None, dec
 
     if path is not None:
         file.close()
-    print(show)
     plt.imshow(back_patch, origin='lower')
     if output is not None:
         plt.savefig(output + "patch.jpg")
@@ -1759,3 +1758,5 @@ def intensity_radius(image, centre_x, centre_y, noise: float = None, limit: floa
             intensities.append(np.mean(pixels))
 
     return radii, np.array(intensities)
+
+
