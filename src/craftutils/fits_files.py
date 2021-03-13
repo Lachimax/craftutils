@@ -684,7 +684,7 @@ def world_to_pix(ra: "float", dec: "float", header: "fits.header.Header"):
 def trim(hdu: fits.hdu.hdulist.HDUList,
          left: Union[int, units.Quantity] = None, right: Union[int, units.Quantity] = None,
          bottom: Union[int, units.Quantity] = None, top: Union[int, units.Quantity] = None,
-         update_wcs: bool = True, in_place: bool = False):
+         update_wcs: bool = True, in_place: bool = False, quiet: bool = False):
     """
 
     :param hdu:
@@ -728,24 +728,25 @@ def trim(hdu: fits.hdu.hdulist.HDUList,
     if update_wcs:
         new_hdu[0].header['CRPIX1'] = hdu[0].header['CRPIX1'] - left
         new_hdu[0].header['CRPIX2'] = hdu[0].header['CRPIX2'] - bottom
-
-    print(bottom, top, left, right)
+    if not quiet:
+        print(bottom, top, left, right)
     new_hdu[0].data = hdu[0].data[bottom:top, left:right]
 
     return new_hdu
 
 
-def subimage_edges(data: np.ndarray, x, y, frame):
+def subimage_edges(data: np.ndarray, x, y, frame, quiet: bool = True):
     bottom = y - frame
     top = y + frame
     left = x - frame
     right = x + frame
-    bottom, top, left, right = check_subimage_edges(data=data, bottom=bottom, top=top, left=left, right=right)
+    bottom, top, left, right = check_subimage_edges(data=data, bottom=bottom, top=top, left=left, right=right, quiet=quiet)
     return bottom, top, left, right
 
 
-def check_subimage_edges(data: np.ndarray, bottom, top, left, right):
-    print(bottom, top, left, right)
+def check_subimage_edges(data: np.ndarray, bottom, top, left, right, quiet: bool = True):
+    if not quiet:
+        print(bottom, top, left, right)
     if (bottom < 0 and top < 0) or (bottom > data.shape[0] and top > data.shape[0]):
         raise ValueError("Both y-axis edges are outside the image.")
     if (left < 0 and right < 0) or (left > data.shape[1] and right > data.shape[1]):
@@ -758,7 +759,7 @@ def check_subimage_edges(data: np.ndarray, bottom, top, left, right):
 
 
 def trim_frame_point(hdu: fits.hdu.hdulist.HDUList, ra: float, dec: float,
-                     frame: Union[int, float], world_frame: bool = False):
+                     frame: Union[int, float], world_frame: bool = False, quiet: bool = False):
     """
     Trims a fits file to frame a single point.
     :param hdu:
@@ -777,7 +778,7 @@ def trim_frame_point(hdu: fits.hdu.hdulist.HDUList, ra: float, dec: float,
 
     bottom, top, left, right = subimage_edges(data=hdu[0].data, x=x, y=y, frame=frame)
 
-    hdu_cut = trim(hdu=hdu, left=left, right=right, bottom=bottom, top=top)
+    hdu_cut = trim(hdu=hdu, left=left, right=right, bottom=bottom, top=top, quiet=quiet)
     return hdu_cut
 
 
