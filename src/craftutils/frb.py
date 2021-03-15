@@ -5,3 +5,6 @@ class Field:
 
 class Epoch:
     mjd = 0.0
+
+class Image:
+    frame_type = "stacked"

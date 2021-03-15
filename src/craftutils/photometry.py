@@ -241,9 +241,7 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
                                    cat_zeropoint: float = 0.0,
                                    cat_zeropoint_err: float = 0.0):
     """
-    This function expects your sextractor columns to be in the same format as found in params.sextractor_columns and
-    default.param under sextractor.
-    It also expects your catalogue to be a .csv.
+    This function expects your catalogue to be a .csv.
     :param sextractor_cat_path:
     :param cat_path:
     :param image:
