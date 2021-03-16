@@ -213,7 +213,7 @@ def magnitude_error(flux: 'float', flux_err: 'float' = 0.0,
 
 def determine_zeropoint_sextractor(sextractor_cat_path: str,
                                    cat_path: str,
-                                   image: str,
+                                   image: Union[str, fits.hdu],
                                    output_path: str,
                                    cat_name: str = 'Catalogue',
                                    image_name: str = 'FORS2',
@@ -223,13 +223,11 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
                                    cat_mag_col: str = 'WAVG_MAG_PSF_',
                                    sex_ra_col='ALPHA_SKY',
                                    sex_dec_col='DELTA_SKY',
-                                   sex_x_col: str = 'XPSF_IMAGE',
-                                   sex_y_col: str = 'YPSF_IMAGE',
-                                   pix_tol: float = 5.,
+                                   sex_x_col: str = 'X_IMAGE',
+                                   sex_y_col: str = 'Y_IMAGE',
+                                   pix_tol: float = 10.,
                                    flux_column: str = 'FLUX_PSF',
                                    flux_err_column: str = 'FLUXERR_PSF',
-                                   mag_range_cat_upper: float = 20.,
-                                   mag_range_cat_lower: float = 30.,
                                    mag_range_sex_upper: float = 100,
                                    mag_range_sex_lower: float = -100,
                                    stars_only: bool = True,
@@ -277,13 +275,10 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
 
     params = {}
 
-    if type(image) is str:
-        params['image_path'] = str(image)
-        image_path = image
-        image = fits.open(image_path)
+    image, path = ff.path_or_hdu(hdu=image)
+    params['image_path'] = str(path)
 
-    if not os.path.isdir(output_path):
-        os.mkdir(output_path)
+    u.mkdir_check(output_path)
 
     if exp_time is None:
         exp_time = ff.get_exp_time(image)
@@ -313,8 +308,8 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
     params['exp_time'] = float(exp_time)
     params['pix_tol'] = float(pix_tol)
     params['ang_tol'] = float(tolerance)
-    params['mag_cut_min'] = float(mag_range_cat_lower)
-    params['mag_cut_max'] = float(mag_range_cat_upper)
+#    params['mag_cut_min'] = float(mag_range_cat_lower)
+#    params['mag_cut_max'] = float(mag_range_cat_upper)
     params['cat_path'] = str(cat_path)
     params['cat_ra_col'] = str(cat_ra_col)
     params['cat_dec_col'] = str(cat_dec_col)
@@ -416,40 +411,37 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
 
     # Clean undesirable objects from consideration:
     print(len(matches), 'total matches')
-    params['matches_1_total'] = len(matches)
+    n_match = 0
+
+    params[f'matches_{n_match}_total'] = len(matches)
+    n_match += 1
 
     remove = np.isnan(matches[cat_mag_col])
     print(sum(np.invert(remove)), 'matches after removing catalogue mag nans')
-    params['matches_2_nans_cat'] = float(sum(np.invert(remove)))
+    params[f'matches_{n_match}_nans_cat'] = float(sum(np.invert(remove)))
+    n_match += 1
 
     remove = remove + np.isnan(matches['mag'])
     print(sum(np.invert(remove)), 'matches after removing SExtractor mag nans')
-    params['matches_3_nans_sex'] = float(sum(np.invert(remove)))
+    params[f'matches_{n_match}_nans_sex'] = float(sum(np.invert(remove)))
+    n_match += 1
 
     remove = remove + (matches[sex_y_col] < y_lower)
     remove = remove + (matches[sex_y_col] > y_upper)
     print(sum(np.invert(remove)), 'matches after removing objects in y-exclusion zone')
-    params['matches_4_y_exclusion'] = float(sum(np.invert(remove)))
-
-    remove = remove + (matches[cat_mag_col] < mag_range_cat_lower)
-    print(sum(np.invert(remove)),
-          'matches after removing objects objects with mags > ' + str(mag_range_cat_upper))
-    params['matches_5_cat_mag_upper'] = float(sum(np.invert(remove)))
-
-    remove = remove + (mag_range_cat_upper < matches[cat_mag_col])
-    print(sum(np.invert(remove)),
-          'matches after removing objects objects with mags < ' + str(mag_range_cat_lower))
-    params['matches_6_cat_mag_lower'] = float(sum(np.invert(remove)))
+    params[f'matches_{n_match}_y_exclusion'] = float(sum(np.invert(remove)))
+    n_match += 1
 
     remove = remove + (matches['mag'] < mag_range_sex_lower)
     print(sum(np.invert(remove)),
           'matches after removing objects objects with SExtractor mags > ' + str(mag_range_sex_upper))
-    params['matches_7_sex_mag_upper'] = float(sum(np.invert(remove)))
+    params[f'matches_{n_match}_sex_mag_upper'] = float(sum(np.invert(remove)))
 
     remove = remove + (mag_range_sex_upper < matches['mag'])
     print(sum(np.invert(remove)),
           'matches after removing objects objects with SExtractor mags < ' + str(mag_range_sex_lower))
-    params['matches_8_sex_mag_upper'] = float(sum(np.invert(remove)))
+    params[f'matches_{n_match}_sex_mag_upper'] = float(sum(np.invert(remove)))
+    n_match += 1
 
     if stars_only:
         if star_class_col == 'spread_model':
@@ -459,7 +451,7 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
         else:
             remove = remove + (matches[star_class_col] < star_class_tol)
             print(sum(np.invert(remove)), 'matches after removing non-stars (star_class < ' + str(star_class_tol) + ')')
-        params['matches_9_non_stars'] = float(sum(np.invert(remove)))
+        params[f'matches_{n_match}_non_stars'] = float(sum(np.invert(remove)))
     keep_these = np.invert(remove)
     matches_clean = matches[keep_these]
 
@@ -489,12 +481,133 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
     # weights = 1./np.sqrt(x_uncertainty**2 + y_uncertainty**2)
     # Might not be sensible.
 
-    weights = 1. / y_uncertainty
+    weights = 1./y_uncertainty
 
     linear_model_free = models.Linear1D(slope=1.0)
     linear_model_fixed = models.Linear1D(slope=1.0, fixed={"slope": True})
 
     fitter = fitting.LinearLSQFitter()
+
+    delta = -np.inf
+    rmse_prior = np.inf
+    mag_min = np.min(x[x>-98])
+    x_iter = x[:]
+    y_iter = y[:]
+    weights_iter = weights[:]
+    matches_iter = matches_clean[:]
+
+    x_prior = x_iter
+    y_prior = y_iter
+    weights_prior = weights_iter
+    matches_prior = matches_iter
+
+    keep = np.ones(x_iter.shape, dtype=bool)
+    n = 0
+    u.mkdir_check(output_path + "min_mag_iterations/")
+    while (rmse_prior > 1.0 or delta <= 0) and sum(keep) > 3:
+
+        x_prior = x_iter
+        y_prior = y_iter
+        weights_prior = weights_iter
+        matches_prior = matches_iter
+
+        keep = x_iter >= mag_min
+        x_iter = x_iter[keep]
+        y_iter = y_iter[keep]
+        weights_iter = weights_iter[keep]
+        matches_iter = matches_iter[keep]
+
+        fitted_iter = fitter(linear_model_fixed, x_iter, y_iter, weights=weights_iter)
+        line_iter = fitted_iter(x_iter)
+        rmse_this = u.root_mean_squared_error(model_values=line_iter, obs_values=y_iter, weights=weights_iter)
+
+        plt.scatter(x_iter, y_iter, c='blue')
+        plt.plot(x_iter, line_iter, c='green')
+        plt.suptitle("")
+        plt.xlabel(f"Magnitude in {cat_name}")
+        plt.ylabel("SExtractor Magnitude in " + image_name)
+        plt.savefig(f"{output_path}min_mag_iterations/{n}_{cat_name}vsex_rmse_{rmse_this}_delta{delta}_magmin_{mag_min}.png")
+        plt.close()
+
+        delta = rmse_this - rmse_prior
+
+        mag_min += 0.1
+
+        print("Iterating min cat mag:", mag_min, rmse_prior, delta)
+
+        rmse_prior = rmse_this
+        n += 1
+
+    mag_min -= 0.1
+
+    x = x_prior
+    y = y_prior
+    weights = weights_prior
+    matches = matches_prior
+
+    params["mag_cut_min"] = float(mag_min)
+    print(len(x), f'matches after iterating minimum mag ({mag_min})')
+    params[f'matches_{n_match}_non_stars'] = float(len(x))
+    n_match += 1
+
+    delta = -np.inf
+    rmse_prior = np.inf
+    mag_max = np.max(x)
+    x_iter = x[:]
+    y_iter = y[:]
+    weights_iter = weights[:]
+    matches_iter = matches[:]
+
+    keep = np.ones(x_iter.shape, dtype=bool)
+    n = 0
+    u.mkdir_check(output_path + "max_mag_iterations/")
+    while delta <= 0 and sum(keep) > 3:
+
+        x_prior = x_iter
+        y_prior = y_iter
+        weights_prior = weights_iter
+        matches_prior = matches_iter
+
+        keep = x_iter <= mag_max
+        x_iter = x_iter[keep]
+        y_iter = y_iter[keep]
+        weights_iter = weights_iter[keep]
+        matches_iter = matches_iter[keep]
+
+
+        fitted_iter = fitter(linear_model_fixed, x_iter, y_iter, weights=weights_iter)
+        line_iter = fitted_iter(x_iter)
+
+        rmse_this = u.root_mean_squared_error(model_values=line_iter, obs_values=y_iter, weights=weights_iter)
+
+        plt.scatter(x_iter, y_iter, c='blue')
+        plt.plot(x_iter, line_iter, c='green')
+        plt.suptitle("")
+        plt.xlabel(f"Magnitude in {cat_name}")
+        plt.ylabel("SExtractor Magnitude in " + image_name)
+        plt.savefig(f"{output_path}max_mag_iterations/{n}_{cat_name}vsex_rmse_{rmse_this}_magmax_{mag_max}.png")
+        plt.close()
+
+        delta = rmse_this - rmse_prior
+
+        mag_max -= 0.1
+        rmse_prior = rmse_this
+
+        print("Iterating max cat mag:", mag_max, rmse_prior, delta)
+
+        n += 1
+
+    mag_max += 0.1
+
+    x = x_prior
+    y = y_prior
+    weights = weights_prior
+    matches = matches_prior
+
+    params["mag_cut_max"] = float(mag_max)
+    print(len(x), f'matches after iterating maximum mag ({mag_max})')
+    params[f'matches_{n_match}_non_stars'] = float(len(x))
+    n_match += 1
 
     fitted_free = fitter(linear_model_free, x, y, weights=weights)
     fitted_fixed = fitter(linear_model_fixed, x, y, weights=weights)
@@ -502,12 +615,14 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
     line_free = fitted_free(x)
     line_fixed = fitted_fixed(x)
 
+    rmse = u.root_mean_squared_error(model_values=line_fixed, obs_values=y, weights=weights)
+
     plt.plot(x, line_free, c='red', label='Line of best fit')
     plt.scatter(x, y, c='blue')
     plt.plot(x, line_fixed, c='green', label='Fixed slope = 1')
     plt.legend()
     plt.suptitle("Magnitude Comparisons")
-    plt.xlabel(f"Magnitude in {cat_name}")
+    plt.xlabel("Magnitude in " + cat_name)
     plt.ylabel("SExtractor Magnitude in " + image_name)
     plt.savefig(output_path + "6-" + cat_name + "catvsex.png")
     if show:
@@ -516,14 +631,13 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
 
     print("FREE:", fitted_free)
     print("FIXED:", fitted_fixed)
-    rmse = u.root_mean_squared_error(model_values=line_fixed, obs_values=y, weights=weights)
     print("RMSE:", rmse)
 
     params["zeropoint_raw"] = float(-fitted_fixed.intercept)
     params["rmse_raw"] = float(rmse)
     params["free_fit"] = [float(fitted_free.intercept.value), float(fitted_free.slope.value)]
 
-    or_fitter = fitting.FittingWithOutlierRemoval(fitter, sigma_clip, niter=2, sigma=3.0)
+    or_fitter = fitting.FittingWithOutlierRemoval(fitter, sigma_clip, niter=1, sigma=2.0)
 
     fitted_clipped, mask = or_fitter(linear_model_fixed, x, y, weights=weights)
     fitted_free_clipped, free_mask = or_fitter(linear_model_free, x, y, weights=weights)
@@ -547,7 +661,7 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
     plt.plot(x_clipped, line_clipped, c='green', label='Fixed slope = 1')
     plt.legend()
     plt.suptitle("Magnitude Comparisons")
-    plt.xlabel(f"Magnitude in {cat_name}")
+    plt.xlabel("Magnitude in " + cat_name + " g-band")
     plt.ylabel("SExtractor Magnitude in " + image_name)
     plt.savefig(output_path + "7-" + cat_name + "catvsex_clipped.png")
     if show:
@@ -564,49 +678,49 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
     rmse = u.root_mean_squared_error(model_values=line_clipped, obs_values=y_clipped, weights=weights_clipped)
     print("RMSE:", rmse)
 
-    matches_final = matches_clean[~mask]
+    matches_final = matches[~mask]
 
     params["free_fit_clipped"] = [float(fitted_free_clipped.intercept.value), float(fitted_free_clipped.slope.value)]
     params['rmse_clipped'] = float(rmse)
     params['zeropoint_clipped'] = float(-fitted_clipped.intercept)
     params['zeropoint_err'] = float(params['rmse_clipped'] + cat_zeropoint_err)
 
-    #     if latex_plot:
-    #         plot_params = p.plotting_params()
-    #         size_font = plot_params['size_font']
-    #         size_label = plot_params['size_label']
-    #         size_legend = plot_params['size_legend']
-    #         weight_line = plot_params['weight_line']
+#     if latex_plot:
+#         plot_params = p.plotting_params()
+#         size_font = plot_params['size_font']
+#         size_label = plot_params['size_label']
+#         size_legend = plot_params['size_legend']
+#         weight_line = plot_params['weight_line']
 
-    #         plotting.latex_setup()
+#         plotting.latex_setup()
 
-    #         major_ticks = np.arange(-30, 30, 1)
-    #         minor_ticks = np.arange(-30, 30, 0.1)
+#         major_ticks = np.arange(-30, 30, 1)
+#         minor_ticks = np.arange(-30, 30, 0.1)
 
-    #         fig = plt.figure(figsize=(6, 6))
-    #         plot = fig.add_subplot(1, 1, 1)
-    #         plot.set_xticks(major_ticks)
-    #         plot.set_yticks(major_ticks)
-    #         plot.set_xticks(minor_ticks, minor=True)
-    #         plot.set_yticks(minor_ticks, minor=True)
+#         fig = plt.figure(figsize=(6, 6))
+#         plot = fig.add_subplot(1, 1, 1)
+#         plot.set_xticks(major_ticks)
+#         plot.set_yticks(major_ticks)
+#         plot.set_xticks(minor_ticks, minor=True)
+#         plot.set_yticks(minor_ticks, minor=True)
 
-    #         plot.tick_params(axis='x', labelsize=size_label, pad=5)
-    #         plot.tick_params(axis='y', labelsize=size_label)
-    #         plot.tick_params(which='both', width=2)
-    #         plot.tick_params(which='major', length=4)
-    #         plot.tick_params(which='minor', length=2)
+#         plot.tick_params(axis='x', labelsize=size_label, pad=5)
+#         plot.tick_params(axis='y', labelsize=size_label)
+#         plot.tick_params(which='both', width=2)
+#         plot.tick_params(which='major', length=4)
+#         plot.tick_params(which='minor', length=2)
 
-    #         plot.plot(x_clipped[cat_mag_col], line_clipped, c='red', label='', lw=weight_line)
-    #         plot.scatter(matches_sub_outliers[cat_mag_col], matches_sub_outliers['mag'], c='blue', s=16)
-    #         # plt.legend()
-    #         # plt.suptitle("Magnitude Comparisons without outliers")
-    #         plot.set_xlabel("Magnitude in " + cat_name + " catalogue ($g$-band)", fontsize=size_font, fontweight='bold')
-    #         plot.set_ylabel("Magnitude from SExtractor (image)", fontsize=size_font, fontweight='bold')
-    #         # fig.savefig(output_path + "7-catvaper-outliers.pdf")
-    #         fig.savefig(output_path + "8-catvmag-nice.png")
-    #         if show:
-    #             plt.show(plot)
-    #         plt.close()
+#         plot.plot(x_clipped[cat_mag_col], line_clipped, c='red', label='', lw=weight_line)
+#         plot.scatter(matches_sub_outliers[cat_mag_col], matches_sub_outliers['mag'], c='blue', s=16)
+#         # plt.legend()
+#         # plt.suptitle("Magnitude Comparisons without outliers")
+#         plot.set_xlabel("Magnitude in " + cat_name + " catalogue ($g$-band)", fontsize=size_font, fontweight='bold')
+#         plot.set_ylabel("Magnitude from SExtractor (image)", fontsize=size_font, fontweight='bold')
+#         # fig.savefig(output_path + "7-catvaper-outliers.pdf")
+#         fig.savefig(output_path + "8-catvmag-nice.png")
+#         if show:
+#             plt.show(plot)
+#         plt.close()
 
     matches_final.write(output_path + "matches.csv", format='ascii.csv')
     u.rm_check(output_path + 'parameters.yaml')
@@ -615,6 +729,9 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
     print('Zeropoint - kx: ' + str(params['zeropoint_clipped']) + ' +/- ' + str(
         params['zeropoint_err']))
     print()
+
+    if path is not None:
+        image.close()
 
     return params
 
