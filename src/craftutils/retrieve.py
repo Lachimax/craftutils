@@ -15,6 +15,49 @@ keys = p.keys()
 fors2_filters_retrievable = ["I_BESS", "R_SPEC", "b_HIGH", "v_HIGH"]
 
 
+def cat_columns(cat, f: str = None):
+    cat = cat.lower()
+    if f is not None:
+        f = f[0]
+    else:
+        f = ""
+
+    if cat == 'des':
+        f = f.upper()
+        return {'mag_psf': f"WAVG_MAG_PSF_{f}",
+                'mag_psf_err': f"WAVG_MAGERR_PSF_{f}",
+                'ra': f"RA",
+                'dec': f"DEC",
+                'class_star': f"CLASS_STAR_{f}"}
+    elif cat == 'sdss:':
+        f = f.lower()
+        return {'mag_psf': f"psfMag_{f}",
+                'mag_psf_err': f"WAVG_MAGERR_PSF_{f}",
+                'ra': f"ra",
+                'dec': f"dec",
+                'class_star': f"probPSF_{f}"}
+    elif cat == 'skymapper':
+        f = f.lower()
+        return {'mag_psf': f"{f}_psf",
+                'mag_psf_err': f"WAVG_MAGERR_PSF_{f}",
+                'ra': f"raj2000",
+                'dec': f"dej2000",
+                'class_star': f"class_star_SkyMapper"}
+    else:
+        raise ValueError("Catalogue name not recognised.")
+
+def update_std_photometry(ra: float, dec: float, cat: str):
+    cat = cat.lower()
+    if cat == 'des':
+        return update_std_des_photometry(ra=ra, dec=dec)
+    elif cat == 'sdss':
+        return update_std_sdss_photometry(ra=ra, dec=dec)
+    elif cat == 'skymapper':
+        return update_std_skymapper_photometry(ra=ra, dec=dec)
+    else:
+        raise ValueError("Catalogue name not recognised.")
+
+
 def retrieve_fors2_calib(fil: str = 'I_BESS', date_from: str = '2017-01-01', date_to: str = None):
     """
     Retrieves the full set of photometry parameters from the FORS2 quality control archive
