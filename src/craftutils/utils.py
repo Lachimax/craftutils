@@ -204,16 +204,36 @@ def get_column_names_sextractor(path):
     return columns
 
 
-def mean_squared_error(model_values, obs_values):
+def mean_squared_error(model_values, obs_values, weights=None, quiet=True):
+    """
+    Weighting from https://stats.stackexchange.com/questions/230517/weighted-root-mean-square-error
+    :param model_values:
+    :param obs_values:
+    :param weights:
+    :param quiet:
+    :return:
+    """
     if len(model_values) != len(obs_values):
         raise ValueError("Arrays must be the same length.")
     n = len(model_values)
+    if not quiet:
+        print("n:", n)
+    if weights is None:
+        weights = 1
+    else:
+        weights = weights / np.linalg.norm(weights, ord=1)
+        n = 1
+        if not quiet:
+            print("Normalised weights:", np.sum(weights))
 
-    return (1 / n) * np.sum((obs_values - model_values) ** 2)
+    return (1 / n) * np.sum(weights * (obs_values - model_values) ** 2)
 
 
-def root_mean_squared_error(model_values, obs_values):
-    return np.sqrt(mean_squared_error(model_values=model_values, obs_values=obs_values))
+def root_mean_squared_error(model_values, obs_values, weights=None, quiet=True):
+    mse = mean_squared_error(model_values=model_values, obs_values=obs_values, weights=weights, quiet=quiet)
+    if not quiet:
+        print("MSE:", mse)
+    return np.sqrt(mse)
 
 
 def mode(lst: 'list'):
