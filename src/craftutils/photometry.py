@@ -23,6 +23,7 @@ from astropy.io import fits as fits
 from astropy import convolution
 from astropy import units
 from astropy.coordinates import SkyCoord
+from astropy.stats import sigma_clip
 
 from craftutils import fits_files as ff
 import craftutils.params as p
@@ -222,11 +223,11 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
                                    cat_mag_col: str = 'WAVG_MAG_PSF_',
                                    sex_ra_col='ALPHA_SKY',
                                    sex_dec_col='DELTA_SKY',
-                                   sex_x_col: str = 'X_IMAGE',
-                                   sex_y_col: str = 'Y_IMAGE',
-                                   pix_tol: float = 10.,
-                                   mag_tol: float = 0.1,
-                                   flux_column: str = 'FLUX_AUTO',
+                                   sex_x_col: str = 'XPSF_IMAGE',
+                                   sex_y_col: str = 'YPSF_IMAGE',
+                                   pix_tol: float = 5.,
+                                   flux_column: str = 'FLUX_PSF',
+                                   flux_err_column: str = 'FLUXERR_PSF',
                                    mag_range_cat_upper: float = 20.,
                                    mag_range_cat_lower: float = 30.,
                                    mag_range_sex_upper: float = 100,
@@ -239,7 +240,8 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
                                    y_upper: int = 100000,
                                    cat_type: str = 'csv',
                                    cat_zeropoint: float = 0.0,
-                                   cat_zeropoint_err: float = 0.0):
+                                   cat_zeropoint_err: float = 0.0,
+                                   latex_plot: bool = False):
     """
     This function expects your catalogue to be a .csv.
     :param sextractor_cat_path:
@@ -257,8 +259,8 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
     :param sex_x_col:
     :param sex_y_col:
     :param pix_tol:
-    :param mag_tol:
     :param flux_column:
+    :param flux_err_column:
     :param mag_range_cat_upper:
     :param mag_range_cat_lower:
     :param mag_range_sex_upper:
@@ -313,7 +315,6 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
     params['ang_tol'] = float(tolerance)
     params['mag_cut_min'] = float(mag_range_cat_lower)
     params['mag_cut_max'] = float(mag_range_cat_upper)
-    params['mag_tol'] = float(mag_tol)
     params['cat_path'] = str(cat_path)
     params['cat_ra_col'] = str(cat_ra_col)
     params['cat_dec_col'] = str(cat_dec_col)
@@ -334,7 +335,11 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
 
     source_tbl = table.Table.read(sextractor_cat_path, format="ascii.sextractor")
 
-    source_tbl['mag'], _, _ = magnitude_complete(flux=source_tbl[flux_column], exp_time=exp_time)
+    source_tbl['mag'], mag_err_plus, mag_err_minus = magnitude_complete(flux=source_tbl[flux_column],
+                                                                        flux_err=source_tbl[flux_err_column],
+                                                                        exp_time=exp_time)
+
+    source_tbl['mag_err'] = np.maximum(np.abs(mag_err_plus), np.abs(mag_err_minus))
 
     # Plot all stars found by SExtractor.
     source_tbl = source_tbl[source_tbl[sex_ra_col] != 0.0]
@@ -462,9 +467,6 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
         print('Not enough valid matches to calculate zeropoint.')
         return None
 
-    # Calculate individual zeropoint for each star
-    matches_clean['zeropoint_ind'] = matches_clean[cat_mag_col] - matches_clean['mag']
-
     # Plot remaining matches
     plt.imshow(image[0].data, origin='lower', norm=plotting.nice_norm(image[0].data))
     plt.scatter(matches_clean[sex_x_col], matches_clean[sex_y_col], label='SExtractor',
@@ -478,104 +480,140 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
     plt.close()
 
     # Linear fit of catalogue magnitudes vs sextractor magnitudes
-    linfit = pl.polyfit(matches_clean[cat_mag_col],
-                        matches_clean['mag'], 1)
-    linfit_array = linfit[0] * matches_clean[cat_mag_col] + linfit[1]
-    ideal_intercept = np.mean(matches_clean['mag'] - 1. * matches_clean[cat_mag_col])
-    # linfit_ideal is the model when we fix the slope to 1, as it should be in theory.
-    linfit_ideal = 1. * matches_clean[cat_mag_col] + ideal_intercept
-    params['linfit_unfixed'] = str(linfit)
-    rmse = u.root_mean_squared_error(model_values=linfit_ideal, obs_values=matches_clean['mag'])
-    params['zeropoint_raw'] = float(-ideal_intercept)
-    params['rmse_raw'] = float(rmse)
 
-    plt.plot(matches_clean[cat_mag_col], linfit_array, c='red', label='Line of best fit')
-    plt.scatter(matches_clean[cat_mag_col], matches_clean['mag'], c='blue')
-    plt.plot(matches_clean[cat_mag_col], linfit_ideal, c='green', label='Fixed slope = 1')
+    x = matches_clean[cat_mag_col]
+    y = matches_clean['mag']
+    y_uncertainty = matches_clean['mag_err']
+
+    # Use a geometric mean with x_uncertainty? ie uncertainty from catalogue:
+    # weights = 1./np.sqrt(x_uncertainty**2 + y_uncertainty**2)
+    # Might not be sensible.
+
+    weights = 1. / y_uncertainty
+
+    linear_model_free = models.Linear1D(slope=1.0)
+    linear_model_fixed = models.Linear1D(slope=1.0, fixed={"slope": True})
+
+    fitter = fitting.LinearLSQFitter()
+
+    fitted_free = fitter(linear_model_free, x, y, weights=weights)
+    fitted_fixed = fitter(linear_model_fixed, x, y, weights=weights)
+
+    line_free = fitted_free(x)
+    line_fixed = fitted_fixed(x)
+
+    plt.plot(x, line_free, c='red', label='Line of best fit')
+    plt.scatter(x, y, c='blue')
+    plt.plot(x, line_fixed, c='green', label='Fixed slope = 1')
     plt.legend()
     plt.suptitle("Magnitude Comparisons")
-    plt.xlabel("Magnitude in " + cat_name + " g-band")
-    plt.ylabel("SExtractor MAG\_APER in " + image_name)
-    plt.savefig(output_path + "6-" + cat_name + "catvaper.png")
+    plt.xlabel(f"Magnitude in {cat_name}")
+    plt.ylabel("SExtractor Magnitude in " + image_name)
+    plt.savefig(output_path + "6-" + cat_name + "catvsex.png")
     if show:
         plt.show()
     plt.close()
 
-    # Discard outliers
-    delta_mag = np.abs(matches_clean['mag'] - linfit_ideal)
-    keep = delta_mag < mag_tol
+    print("FREE:", fitted_free)
+    print("FIXED:", fitted_fixed)
+    rmse = u.root_mean_squared_error(model_values=line_fixed, obs_values=y, weights=weights)
+    print("RMSE:", rmse)
 
-    matches_sub_outliers = matches_clean[keep]
+    params["zeropoint_raw"] = float(-fitted_fixed.intercept)
+    params["rmse_raw"] = float(rmse)
+    params["free_fit"] = [float(fitted_free.intercept.value), float(fitted_free.slope.value)]
 
-    print(len(matches_sub_outliers), 'matches after stripping outliers from linear fit')
-    params['matches_10_-outliers'] = len(matches_sub_outliers)
+    or_fitter = fitting.FittingWithOutlierRemoval(fitter, sigma_clip, niter=2, sigma=3.0)
 
-    if len(matches_sub_outliers) < 3:
+    fitted_clipped, mask = or_fitter(linear_model_fixed, x, y, weights=weights)
+    fitted_free_clipped, free_mask = or_fitter(linear_model_free, x, y, weights=weights)
+
+    line_clipped = fitted_clipped(x)
+    line_clipped = line_clipped[~mask]
+
+    line_free_clipped = fitted_free_clipped(x)
+    line_free_clipped = line_free_clipped[~free_mask]
+
+    y_clipped = y[~mask]
+    x_clipped = x[~mask]
+    weights_clipped = weights[~mask]
+
+    y_free_clipped = y[~free_mask]
+    x_free_clipped = x[~free_mask]
+    weights_free_clipped = weights[~free_mask]
+
+    plt.plot(x_free_clipped, line_free_clipped, c='red', label='Line of best fit')
+    plt.scatter(x_clipped, y_clipped, c='blue')
+    plt.plot(x_clipped, line_clipped, c='green', label='Fixed slope = 1')
+    plt.legend()
+    plt.suptitle("Magnitude Comparisons")
+    plt.xlabel(f"Magnitude in {cat_name}")
+    plt.ylabel("SExtractor Magnitude in " + image_name)
+    plt.savefig(output_path + "7-" + cat_name + "catvsex_clipped.png")
+    if show:
+        plt.show()
+    plt.close()
+
+    print(sum(~mask), 'matches after clipping outliers from linear fit')
+    params['matches_10_mag_clipped'] = int(sum(~mask))
+    if sum(~mask) < 3:
         print('Not enough valid matches to calculate zeropoint.')
         return None
 
-    linfit = pl.polyfit(matches_sub_outliers[cat_mag_col],
-                        matches_sub_outliers['mag'], 1)
-    linfit_array = linfit[0] * matches_sub_outliers[cat_mag_col] + linfit[1]
-    ideal_intercept = np.mean(matches_sub_outliers['mag'] - 1. * matches_sub_outliers[cat_mag_col])
-    # linfit_ideal is the model when we fix the slope to 1, as it should be in theory.
-    linfit_ideal = 1. * matches_sub_outliers[cat_mag_col] + ideal_intercept
-    params['linfit_unfixed-outliers'] = str(linfit)
-    params['linfit_slope'] = str(linfit[0])
-    params['d_linfit_slope'] = str(abs(1. - float(linfit[0])))
-    rmse = u.root_mean_squared_error(model_values=linfit_ideal, obs_values=matches_sub_outliers['mag'])
-    params['zeropoint_sub_outliers'] = float(-ideal_intercept)
-    params['rmse_sub_outliers'] = float(rmse)
+    print("CLIPPED:", fitted_clipped)
+    rmse = u.root_mean_squared_error(model_values=line_clipped, obs_values=y_clipped, weights=weights_clipped)
+    print("RMSE:", rmse)
 
-    plot_params = p.plotting_params()
-    size_font = plot_params['size_font']
-    size_label = plot_params['size_label']
-    size_legend = plot_params['size_legend']
-    weight_line = plot_params['weight_line']
+    matches_final = matches_clean[~mask]
 
-    # plotting.latex_setup()
+    params["free_fit_clipped"] = [float(fitted_free_clipped.intercept.value), float(fitted_free_clipped.slope.value)]
+    params['rmse_clipped'] = float(rmse)
+    params['zeropoint_clipped'] = float(-fitted_clipped.intercept)
+    params['zeropoint_err'] = float(params['rmse_clipped'] + cat_zeropoint_err)
 
-    major_ticks = np.arange(-30, 30, 1)
-    minor_ticks = np.arange(-30, 30, 0.1)
+    #     if latex_plot:
+    #         plot_params = p.plotting_params()
+    #         size_font = plot_params['size_font']
+    #         size_label = plot_params['size_label']
+    #         size_legend = plot_params['size_legend']
+    #         weight_line = plot_params['weight_line']
 
-    fig = plt.figure(figsize=(6, 6))
-    plot = fig.add_subplot(1, 1, 1)
-    plot.set_xticks(major_ticks)
-    plot.set_yticks(major_ticks)
-    plot.set_xticks(minor_ticks, minor=True)
-    plot.set_yticks(minor_ticks, minor=True)
+    #         plotting.latex_setup()
 
-    plot.tick_params(axis='x', labelsize=size_label, pad=5)
-    plot.tick_params(axis='y', labelsize=size_label)
-    plot.tick_params(which='both', width=2)
-    plot.tick_params(which='major', length=4)
-    plot.tick_params(which='minor', length=2)
+    #         major_ticks = np.arange(-30, 30, 1)
+    #         minor_ticks = np.arange(-30, 30, 0.1)
 
-    # plt.plot(matches_sub_outliers[cat_mag_col], linfit_array, c='red', label='Line of best fit')
-    plot.plot(matches_sub_outliers[cat_mag_col], linfit_ideal, c='red', label='', lw=weight_line)
-    plot.scatter(matches_sub_outliers[cat_mag_col], matches_sub_outliers['mag'], c='blue', s=16)
-    # plt.legend()
-    # plt.suptitle("Magnitude Comparisons without outliers")
-    plot.set_xlabel("Magnitude in " + cat_name + " catalogue ($g$-band)", fontsize=size_font, fontweight='bold')
-    plot.set_ylabel("Magnitude from SExtractor (image)", fontsize=size_font, fontweight='bold')
-    # fig.savefig(output_path + "7-catvaper-outliers.pdf")
-    fig.savefig(output_path + "7-catvaper-outliers.png")
-    if show:
-        plt.show(plot)
-    plt.close()
+    #         fig = plt.figure(figsize=(6, 6))
+    #         plot = fig.add_subplot(1, 1, 1)
+    #         plot.set_xticks(major_ticks)
+    #         plot.set_yticks(major_ticks)
+    #         plot.set_xticks(minor_ticks, minor=True)
+    #         plot.set_yticks(minor_ticks, minor=True)
 
-    params['zeropoint_median'] = float(np.median(matches_sub_outliers['zeropoint_ind']))
-    params['zeropoint_median_err'] = float(2 * np.std(matches_sub_outliers['zeropoint_ind'] + cat_zeropoint_err))
-    params['zeropoint_err'] = float(cat_zeropoint_err + params['rmse_sub_outliers'])
+    #         plot.tick_params(axis='x', labelsize=size_label, pad=5)
+    #         plot.tick_params(axis='y', labelsize=size_label)
+    #         plot.tick_params(which='both', width=2)
+    #         plot.tick_params(which='major', length=4)
+    #         plot.tick_params(which='minor', length=2)
 
-    matches.write(output_path + "matches.csv", format='ascii.csv')
+    #         plot.plot(x_clipped[cat_mag_col], line_clipped, c='red', label='', lw=weight_line)
+    #         plot.scatter(matches_sub_outliers[cat_mag_col], matches_sub_outliers['mag'], c='blue', s=16)
+    #         # plt.legend()
+    #         # plt.suptitle("Magnitude Comparisons without outliers")
+    #         plot.set_xlabel("Magnitude in " + cat_name + " catalogue ($g$-band)", fontsize=size_font, fontweight='bold')
+    #         plot.set_ylabel("Magnitude from SExtractor (image)", fontsize=size_font, fontweight='bold')
+    #         # fig.savefig(output_path + "7-catvaper-outliers.pdf")
+    #         fig.savefig(output_path + "8-catvmag-nice.png")
+    #         if show:
+    #             plt.show(plot)
+    #         plt.close()
+
+    matches_final.write(output_path + "matches.csv", format='ascii.csv')
     u.rm_check(output_path + 'parameters.yaml')
     p.add_params(file=output_path + 'parameters.yaml', params=params)
 
-    print('Zeropoint - kx: ' + str(params['zeropoint_sub_outliers']) + ' +/- ' + str(
+    print('Zeropoint - kx: ' + str(params['zeropoint_clipped']) + ' +/- ' + str(
         params['zeropoint_err']))
-    print('Zeropoint - kx (median): ' + str(params['zeropoint_median']) + ' +/- ' + str(
-        params['zeropoint_median_err']))
     print()
 
     return params
@@ -1756,5 +1794,3 @@ def intensity_radius(image, centre_x, centre_y, noise: float = None, limit: floa
             intensities.append(np.mean(pixels))
 
     return radii, np.array(intensities)
-
-
