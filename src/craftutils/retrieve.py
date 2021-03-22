@@ -11,8 +11,8 @@ from craftutils import params as p
 from craftutils import utils as u
 
 keys = p.keys()
-
 fors2_filters_retrievable = ["I_BESS", "R_SPEC", "b_HIGH", "v_HIGH"]
+photometry_catalogues = ['DES', 'SDSS', 'SkyMapper']
 
 
 def cat_columns(cat, f: str = None):
@@ -29,7 +29,7 @@ def cat_columns(cat, f: str = None):
                 'ra': f"RA",
                 'dec': f"DEC",
                 'class_star': f"CLASS_STAR_{f}"}
-    elif cat == 'sdss:':
+    elif cat == 'sdss':
         f = f.lower()
         return {'mag_psf': f"psfMag_{f}",
                 'mag_psf_err': f"WAVG_MAGERR_PSF_{f}",
@@ -44,7 +44,13 @@ def cat_columns(cat, f: str = None):
                 'dec': f"dej2000",
                 'class_star': f"class_star_SkyMapper"}
     else:
-        raise ValueError("Catalogue name not recognised.")
+        raise ValueError(f"Catalogue {cat} not recognised.")
+
+
+def update_std_photometry_all(ra: float, dec: float):
+    for cat_name in photometry_catalogues:
+        update_std_photometry(ra=ra, dec=dec, cat=cat_name)
+
 
 def update_std_photometry(ra: float, dec: float, cat: str):
     cat = cat.lower()
@@ -54,6 +60,18 @@ def update_std_photometry(ra: float, dec: float, cat: str):
         return update_std_sdss_photometry(ra=ra, dec=dec)
     elif cat == 'skymapper':
         return update_std_skymapper_photometry(ra=ra, dec=dec)
+    else:
+        raise ValueError("Catalogue name not recognised.")
+
+
+def update_frb_photometry(frb: str, cat: str):
+    cat = cat.lower()
+    if cat == 'des':
+        return update_frb_des_photometry(frb=frb)
+    elif cat == 'sdss':
+        return update_frb_sdss_photometry(frb=frb)
+    elif cat == 'skymapper':
+        return update_frb_skymapper_photometry(frb=frb)
     else:
         raise ValueError("Catalogue name not recognised.")
 
@@ -626,8 +644,9 @@ def update_frb_des_photometry(frb: str, force: bool = False):
     elif outputs["in_des"] is True:
         print("There is already DES data present for this field.")
         return True
-    else:
+    else: # outputs["in_des"] is False
         print("This field is not present in DES.")
+        return None
 
 
 def submit_cutout_job_des(ra: float, dec: float):
@@ -726,7 +745,7 @@ def retrieve_skymapper_photometry(ra: float, dec: float):
     print(f"\nQuerying SkyMapper DR3 archive for field centring on RA={ra}, DEC={dec}")
     url = f"http://skymapper.anu.edu.au/sm-cone/aus/query?RA={ra}&DEC={dec}&SR=0.2&RESPONSEFORMAT=CSV"
     response = requests.get(url).content
-    if response.find(b"\n") == len(response) + 1:
+    if response.count(b"\n") <= 1:
         return None
     else:
         return response
