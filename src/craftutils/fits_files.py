@@ -748,9 +748,9 @@ def check_subimage_edges(data: np.ndarray, bottom, top, left, right, quiet: bool
     if not quiet:
         print(bottom, top, left, right)
     if (bottom < 0 and top < 0) or (bottom > data.shape[0] and top > data.shape[0]):
-        raise ValueError("Both y-axis edges are outside the image.")
+        raise ValueError(f"Both y-axis edges ({bottom}, {top}) are outside the image.")
     if (left < 0 and right < 0) or (left > data.shape[1] and right > data.shape[1]):
-        raise ValueError("Both x-axis edges are outside the image.")
+        raise ValueError(f"Both x-axis edges ({left}, {right}) are outside the image.")
     bottom = max(int(bottom), 0)
     top = min(int(top), data.shape[0])
     left = max(int(left), 0)
