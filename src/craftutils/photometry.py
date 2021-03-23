@@ -109,6 +109,8 @@ def fit_background(data: np.ndarray, model_type='polynomial', deg: int = 2, foot
     print(y.shape)
     model = fitter(init, x, y, data[footprint[0]:footprint[1], footprint[2]:footprint[3]],
                    weights=weights)
+
+    # rmse = u.root_mean_squared_error(model_values=model(x,y).flatten(), obs_values=data[footprint[0]:footprint[1], footprint[2]:footprint[3]].flatten())
     return model(x, y), model(x_large, y_large), model
 
 
@@ -508,7 +510,7 @@ def determine_zeropoint_sextractor(sextractor_cat_path: str,
     while (rmse_prior > 1.0 or delta <= 0) and sum(keep) > 3:
         x_prior = x_iter
         y_prior = y_iter
-        y_uncertainty_prior = y_iter
+        y_uncertainty_prior = y_uncertainty_iter
         weights_prior = weights_iter
         matches_prior = matches_iter
 
