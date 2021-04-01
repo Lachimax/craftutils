@@ -1898,46 +1898,51 @@ def select_zeropoint(obj: str, filt: str, instrument: str, outputs: dict = None)
     if outputs is None:
         outputs = p.object_output_params(obj=obj, instrument=instrument)
 
-    if f_output + '_zeropoint_provided' in outputs and outputs[f_output + '_zeropoint_provided'] is not None:
+    if 'provided' in outputs[f'{f_output}_zeropoints'] and outputs[f'{f_output}_zeropoints']['provided'] is not None:
         # If there is a zeropoint provided by the telescope, use that and associated parameters.
-        zeropoint = outputs[f_output + '_zeropoint_provided']
-        zeropoint_err = outputs[f_output + '_zeropoint_provided_err']
+        zeropoint_dict = outputs[f'{f_output}_zeropoints']['provided']
+        zeropoint = zeropoint_dict['zeropoint']
+        zeropoint_err = zeropoint_dict['zeropoint_err']
         airmass = outputs[f_output + '_airmass_mean']
         airmass_err = outputs[f_output + '_airmass_err']
         extinction = outputs[f_output + '_extinction']
         extinction_err = outputs[f_output + '_extinction_err']
         print('Using provided zeropoint.')
 
-    elif f_output + '_zeropoint_derived' in outputs and outputs[f_output + '_zeropoint_derived'] is not None:
-        # If not, defer to the zeropoint derived from the field. Extinction and airmass set to zero because extinction
-        # correction has already been performed for this quantity.
-        zeropoint = outputs[f_output + '_zeropoint_derived']
-        zeropoint_err = outputs[f_output + '_zeropoint_derived_err']
-        airmass = 0.0
-        airmass_err = 0.0
-        extinction = 0.0
-        extinction_err = 0.0
-        print('Using science-field zeropoint.')
+    elif 'best' in outputs[f'{f_output}_zeropoints'] and outputs[f'{f_output}_zeropoints']['best'] is not None:
 
-    elif f_output + '_zeropoint_std' in outputs and outputs[f_output + '_zeropoint_std'] is not None:
         # If neither of those exist, use the zeropoint derived from provided standard fields and correct for the
         # difference in airmass.
-        zeropoint = outputs[f_output + '_zeropoint_std']
-        zeropoint_err = outputs[f_output + '_zeropoint_std_err']
+        zeropoint_dict = outputs[f'{f_output}_zeropoints']['best']
+        zeropoint = zeropoint_dict['zeropoint']
+        zeropoint_err = zeropoint_dict['zeropoint_err']
+        typ = zeropoint_dict['type']
 
-        airmass_field = outputs[f_output + '_airmass_mean']
-        airmass_field_err = outputs[f_output + '_airmass_err']
-        airmass_std = outputs[f_output + '_airmass_std']
-        airmass_std_err = 0.0
-        airmass = airmass_field - airmass_std
-        airmass_err = airmass_field_err + airmass_std_err
-        print('Standard airmass:', airmass_std)
-        print('Science airmass:', airmass_field)
-        print('Delta airmass:', airmass)
+        print(typ)
 
-        extinction = outputs[f_output + '_extinction']
-        extinction_err = outputs[f_output + '_extinction_err']
+        if typ == 'science_field':
+            airmass = 0.0
+            airmass_err = 0.0
+            extinction = 0.0
+            extinction_err = 0.0
+            print('Using science-field zeropoint.')
 
+        elif typ == 'standard_field':
+            airmass_field = outputs[f_output + '_airmass_mean']
+            airmass_field_err = outputs[f_output + '_airmass_err']
+            airmass_std = zeropoint_dict['airmass']
+            airmass_std_err = 0.0
+            airmass = airmass_field - airmass_std
+            airmass_err = airmass_field_err + airmass_std_err
+            print('Standard airmass:', airmass_std)
+            print('Science airmass:', airmass_field)
+            print('Delta airmass:', airmass)
+
+            extinction = outputs[f_output + '_extinction']
+            extinction_err = outputs[f_output + '_extinction_err']
+
+        else:
+            raise ValueError('No zeropoint found in output_values file.')
     else:
         raise ValueError('No zeropoint found in output_values file.')
 
