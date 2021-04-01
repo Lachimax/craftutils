@@ -740,7 +740,8 @@ def subimage_edges(data: np.ndarray, x, y, frame, quiet: bool = True):
     top = y + frame
     left = x - frame
     right = x + frame
-    bottom, top, left, right = check_subimage_edges(data=data, bottom=bottom, top=top, left=left, right=right, quiet=quiet)
+    bottom, top, left, right = check_subimage_edges(data=data, bottom=bottom, top=top, left=left, right=right,
+                                                    quiet=quiet)
     return bottom, top, left, right
 
 
@@ -1035,7 +1036,8 @@ def fits_table_all(input_path: str, output_path: str = "", science_only: bool = 
     """
 
     # If there's no trailing slash in the paths, add one.
-    output_path = u.check_trailing_slash(output_path)
+    if not output_path.endswith(".csv"):
+        output_path = u.check_trailing_slash(output_path)
 
     if output_path == "":
         output_path = input_path + "fits_table.csv"
