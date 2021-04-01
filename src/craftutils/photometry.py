@@ -783,6 +783,7 @@ def zeropoint_science_field(epoch: str,
 
     if cat_name.lower() != "sextractor":
         print(f"Looking for photometry data in field of {epoch[:-2]}; catalogue {cat_name} :")
+
         if r.update_frb_photometry(frb=epoch[:-2], cat=cat_name) is None:
             print("\t\tNo data found in archive.")
             return None, None

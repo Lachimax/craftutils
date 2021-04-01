@@ -644,7 +644,7 @@ def update_frb_des_photometry(frb: str, force: bool = False):
     elif outputs["in_des"] is True:
         print("There is already DES data present for this field.")
         return True
-    else: # outputs["in_des"] is False
+    else:  # outputs["in_des"] is False
         print("This field is not present in DES.")
         return None
 
@@ -744,7 +744,11 @@ def update_frb_des_cutout(frb: str, force: bool = False):
 def retrieve_skymapper_photometry(ra: float, dec: float):
     print(f"\nQuerying SkyMapper DR3 archive for field centring on RA={ra}, DEC={dec}")
     url = f"http://skymapper.anu.edu.au/sm-cone/aus/query?RA={ra}&DEC={dec}&SR=0.2&RESPONSEFORMAT=CSV"
-    response = requests.get(url).content
+    try:
+        response = requests.get(url).content
+    except requests.exceptions.SSLError:
+        print('An SSL error occurred when retrieving SkyMapper data. Skipping.')
+        return None
     if response.count(b"\n") <= 1:
         return None
     else:
