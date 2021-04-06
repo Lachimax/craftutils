@@ -1,2 +1,3 @@
-craftutils is designed for use in conjunction with craft-optical-followup, which is available at:
+THIS REPOSITORY IS NOW DEFUNCT.
+It has been merged with craft-optical-followup:
 https://github.com/Lachimax/craft-optical-followup

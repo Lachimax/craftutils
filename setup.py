@@ -1,6 +1,4 @@
 import setuptools
-from shutil import copy
-from os import getcwd
 
 packages = setuptools.find_packages()
 
@@ -16,5 +14,6 @@ setuptools.setup(
     url="https://github.com/Lachimax/craftutils",
     packages=packages,
     package_dir={'': 'src'},
-    python_requires='>=3.6'
+    python_requires='>=3.6',
+    license='Attribution-NonCommercial-ShareAlike 4.0 International'
 )
